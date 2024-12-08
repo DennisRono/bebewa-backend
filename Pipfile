@@ -8,6 +8,9 @@ flask = "*"
 flask-restful = "*"
 flask-cors = "*"
 python-dotenv = "*"
+sqlalchemy = "*"
+sqlalchemy-serializer = "*"
+flask-sqlalchemy = "*"
 
 [dev-packages]
 
