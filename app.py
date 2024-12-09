@@ -2,19 +2,21 @@ from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from flask_restful import Api, Resource
 from config import Config
-from models import db,app
+from models import db
 from flask_migrate import Migrate
 from authentification.auth import auth
+from administration.admins import admin_bp
 
+app = Flask(__name__)
 CORS(app)
 app.config.from_object(Config)
 
 app.register_blueprint(auth)
+app.register_blueprint(admin_bp)
 
 api = Api(app)
-migrate=Migrate(app=app, db=db)
+migrate = Migrate(app=app, db=db)
 db.init_app(app=app)
-
 
 
 @app.before_request
