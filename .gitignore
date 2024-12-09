@@ -11,3 +11,6 @@ migrations
 
 # C extensions
 *.so
+
+# testing
+tests/

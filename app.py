@@ -4,9 +4,12 @@ from flask_restful import Api, Resource
 from config import Config
 from models import db,app
 from flask_migrate import Migrate
+from authentification.auth import auth
 
 CORS(app)
 app.config.from_object(Config)
+
+app.register_blueprint(auth)
 
 api = Api(app)
 migrate=Migrate(app=app, db=db)
