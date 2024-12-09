@@ -1,13 +1,13 @@
 .env
 .venv/
-migrations/
 venv/
 __pycache__/
 *.pyc
 *.pyo
 *.py[cod]
 *$py.class
-bebewa/
+bebewa
+migrations
 
 # C extensions
 *.so
