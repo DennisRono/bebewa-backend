@@ -254,6 +254,7 @@ class Order(db.Model, SerializerMixin):
     dispatch_time = db.Column(db.DateTime)
     arrival_time = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, nullable=False)
+    price = db.Column(db.Integer, nullable=False, default=0)
     merchant_id = db.Column(db.String, db.ForeignKey("merchants.id"))
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"), nullable=False)
     recipient_id = db.Column(db.String, db.ForeignKey("recipients.id"), nullable=False)
@@ -286,3 +287,6 @@ class Review(db.Model, SerializerMixin):
     comment = db.Column(db.String)
     created_at = db.Column(db.DateTime, nullable=False)
     edited_at = db.Column(db.DateTime)
+
+
+# Subscriptions Table for Drivers

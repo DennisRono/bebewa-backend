@@ -6,13 +6,23 @@ from models import db
 from flask_migrate import Migrate
 from authentification.auth import auth
 from administration.admins import admin_bp
+from administration.dash.metrics import metrics_bp
+from drivers.driver import driver_bp
+from merchants.merchant import merchant_bp
+from orders.order import order_bp
+from reviews.review import review_bp
 
 app = Flask(__name__)
 CORS(app)
 app.config.from_object(Config)
 
 app.register_blueprint(auth)
-app.register_blueprint(admin_bp)
+app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(metrics_bp, url_prefix="/admin/dash")
+app.register_blueprint(driver_bp)
+app.register_blueprint(merchant_bp)
+app.register_blueprint(order_bp)
+app.register_blueprint(review_bp)
 
 api = Api(app)
 migrate = Migrate(app=app, db=db)
