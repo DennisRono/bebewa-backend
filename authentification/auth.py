@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource
 from flask_jwt_extended import jwt_required,get_jwt_identity,create_access_token,create_refresh_token
 from werkzeug.security import check_password_hash
-from models import Driver, Merchant
+from models import Driver, Merchant,Admin
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
 api = Api(auth)
@@ -89,7 +89,7 @@ class Admin_Login(Resource):
         email=data.get("email")
         password=data.get("password")
         try:
-            admin=admin.query.filter_by(email=email).first()
+            admin=Admin.query.filter_by(email=email).first()
             if not admin:
                 return make_response({"msg":f"{email} not registered"},400)
             if not check_password_hash(admin.password, password):
@@ -99,6 +99,7 @@ class Admin_Login(Resource):
                 "refresh_token":create_refresh_token(identity=admin.id),
             },201)
         except Exception as e:
+            print(e)
             return make_response({"msg":"Internal server error"},500)
 api.add_resource(Admin_Login,"/admin-login", endpoint="admin-login")
 
