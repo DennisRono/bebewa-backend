@@ -29,11 +29,12 @@ class User_profile(db.Model, SerializerMixin):
     mark_deleted = db.Column(db.Boolean, nullable=False)
 
     # relationships
-    admin = db.relationship("Admin", back_populates="profile")
+    # admin = db.relationship("Admin", back_populates="profile")
     driver = db.relationship("Driver", back_populates="profile")
     merchant = db.relationship("Merchant", back_populates="profile")
     # serialise rules
-    serialize_rules = ("-admin.profile", "-driver.profile", "-merchant.profile")
+    # serialize_rules = ("-admin.profile", "-driver.profile", "-merchant.profile")
+    serialize_rules = ("-driver.profile", "-merchant.profile")
 
 
 class Admin_status_enum(Enum):
@@ -54,13 +55,14 @@ class Admin(db.Model, SerializerMixin):
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     mark_as_deleted = db.Column(db.Boolean, nullable=False)
-    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    # user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
     status = db.Column(db.Enum(Admin_status_enum), nullable=False)
     # relationships
-    profile = db.relationship("User_profile", back_populates="admin")
+    # profile = db.relationship("User_profile", back_populates="admin")
 
     # serialise rules
-    serialize_rules = ("-profile", "-password")
+    # serialize_rules = ("-profile", "-password")
+    serialize_rules = ("-password",)
 
 
 class Driver_status_enum(Enum):
@@ -81,7 +83,7 @@ class Driver(db.Model, SerializerMixin):
     phone_number = db.Column(db.Integer, unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
     mark_deleted = db.Column(db.Boolean, nullable=False)
-    status = db.Column(db.Enum(Driver_status_enum), nullable=False)
+    status = db.Column(db.Enum(Driver_status_enum), nullable=False, default="Active")
     user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
     # relationships
     profile = db.relationship("User_profile", back_populates="driver")
@@ -178,7 +180,7 @@ class Vehicle(db.Model, SerializerMixin):
     serialize_rules = ("-images.vehicle",)
 
 
-class Vehcle_Image(db.Model, SerializerMixin):
+class Vehicle_Image(db.Model, SerializerMixin):
     __tablename__ = "vehicle_images"
 
     id = db.Column(
