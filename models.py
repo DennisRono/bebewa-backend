@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, DateTime, func
 from sqlalchemy_serializer import SerializerMixin
 import uuid
 from enum import Enum
@@ -24,16 +24,16 @@ class User_profile(db.Model, SerializerMixin):
     email = db.Column(db.String, unique=True)
     kra_pin = db.Column(db.String, unique=True)
     national_id = db.Column(db.Integer, unique=True)
-    created_at = db.Column(db.DateTime, nullable=False)
-    updated_at = db.Column(db.DateTime)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     mark_deleted = db.Column(db.Boolean, nullable=False)
 
     # relationships
-    # admin = db.relationship("Admin", back_populates="profile")
     driver = db.relationship("Driver", back_populates="profile")
     merchant = db.relationship("Merchant", back_populates="profile")
-    # serialise rules
-    # serialize_rules = ("-admin.profile", "-driver.profile", "-merchant.profile")
+    # serialize rules
     serialize_rules = ("-driver.profile", "-merchant.profile")
 
 
@@ -55,13 +55,13 @@ class Admin(db.Model, SerializerMixin):
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     mark_as_deleted = db.Column(db.Boolean, nullable=False)
-    # user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     status = db.Column(db.Enum(Admin_status_enum), nullable=False)
-    # relationships
-    # profile = db.relationship("User_profile", back_populates="admin")
 
-    # serialise rules
-    # serialize_rules = ("-profile", "-password")
+    # serialize rules
     serialize_rules = ("-password",)
 
 
@@ -82,13 +82,17 @@ class Driver(db.Model, SerializerMixin):
     )
     phone_number = db.Column(db.Integer, unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     mark_deleted = db.Column(db.Boolean, nullable=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False, default="Active")
     user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
     # relationships
     profile = db.relationship("User_profile", back_populates="driver")
     deliveries = db.relationship("Order", back_populates="driver")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-profile.driver", "-password", "-deliveries.driver")
 
 
@@ -101,6 +105,10 @@ class Address(db.Model, SerializerMixin):
     county = db.Column(db.String, nullable=False)
     town = db.Column(db.String, nullable=False)
     street = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
 
 class Merchant(db.Model, SerializerMixin):
@@ -113,12 +121,16 @@ class Merchant(db.Model, SerializerMixin):
     password = db.Column(db.String, nullable=False)
     mark_deleted = db.Column(db.Boolean, nullable=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"))
     # relationships
     profile = db.relationship("User_profile", back_populates="merchant")
     orders = db.relationship("Order", back_populates="merchant")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-profile.merchant", "-password", "-orders.merchant")
 
 
@@ -131,9 +143,13 @@ class Recipient(db.Model, SerializerMixin):
     full_name = db.Column(db.String, nullable=False)
     phone_number = db.Column(db.Integer, nullable=False, unique=True)
     email = db.Column(db.String, unique=True)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     # relationships
     deliveries = db.relationship("Order", back_populates="recipient")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-deliveries.recipient",)
 
 
@@ -144,6 +160,10 @@ class Models(db.Model, SerializerMixin):
         db.String, unique=True, primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String, unique=True, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
 
 class Make(db.Model, SerializerMixin):
@@ -153,6 +173,10 @@ class Make(db.Model, SerializerMixin):
         db.String, unique=True, primary_key=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     model_id = db.Column(db.String, db.ForeignKey("models.id"))
 
 
@@ -173,10 +197,14 @@ class Vehicle(db.Model, SerializerMixin):
     driver_id = db.Column(db.String, db.ForeignKey("drivers.id"))
     tonnage = db.Column(db.Integer, nullable=False)
     mark_deleted = db.Column(db.Boolean, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
     # relationships
     images = db.relationship("Vehicle_Image", back_populates="vehicle")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-images.vehicle",)
 
 
@@ -187,11 +215,15 @@ class Vehicle_Image(db.Model, SerializerMixin):
         db.String, primary_key=True, unique=True, default=lambda: str(uuid.uuid4())
     )
     image_url = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     vehicle_id = db.Column(db.String, db.ForeignKey("vehicles.id"), nullable=False)
 
     # relationships
     vehicle = db.relationship("Vehicle", back_populates="images")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-vehicle",)
 
 
@@ -210,9 +242,13 @@ class Commodity(db.Model, SerializerMixin):
     length_cm = db.Column(db.Float)
     width_cm = db.Column(db.Float)
     height_cm = db.Column(db.Float)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     # relationships
     images = db.relationship("Commodity_Image", back_populates="commodity")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-images.commodity",)
 
 
@@ -228,9 +264,13 @@ class Commodity_Image(db.Model, SerializerMixin):
     )
     image_url = db.Column(db.String, nullable=False)
     commodity_id = db.Column(db.String, db.ForeignKey("commodities.id"))
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
     # relationships
     commodity = db.relationship("Commodity", back_populates="images")
-    # serialise rules
+    # serialize rules
     serialize_rules = ("-commodity",)
 
 
@@ -261,13 +301,17 @@ class Order(db.Model, SerializerMixin):
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"), nullable=False)
     recipient_id = db.Column(db.String, db.ForeignKey("recipients.id"), nullable=False)
     driver_id = db.Column(db.String, db.ForeignKey("drivers.id"))
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
     # relationships
     merchant = db.relationship("Merchant", back_populates="orders")
     driver = db.relationship("Driver", back_populates="deliveries")
     recipient = db.relationship("Recipient", back_populates="deliveries")
 
-    # serialise rules
+    # serialize rules
     serialize_rules = (
         "-merchant.orders",
         "-driver.deliveries",
@@ -287,8 +331,10 @@ class Review(db.Model, SerializerMixin):
     )
     rating = db.Column(db.Integer, nullable=False)
     comment = db.Column(db.String)
-    created_at = db.Column(db.DateTime, nullable=False)
-    edited_at = db.Column(db.DateTime)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
 
 # Subscriptions Table for Drivers
