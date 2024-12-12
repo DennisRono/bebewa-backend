@@ -68,12 +68,16 @@ class MetricsResource(Resource):
 
             average_order_price = db.session.query(func.avg(Order.price)).scalar()
 
-            orders_per_driver = (
-                db.session.query(func.avg(func.count(Order.id)))
-                .join(Driver)
+            orders_count_subquery = (
+                db.session.query(Driver.id, func.count(Order.id).label("order_count"))
+                .join(Order, Driver.id == Order.driver_id)
                 .group_by(Driver.id)
-                .scalar()
+                .subquery()
             )
+
+            orders_per_driver = db.session.query(
+                func.avg(orders_count_subquery.c.order_count)
+            ).scalar()
 
             most_active_merchant = (
                 db.session.query(Merchant.id, func.count(Order.id))
@@ -82,6 +86,14 @@ class MetricsResource(Resource):
                 .order_by(func.count(Order.id).desc())
                 .first()
             )
+            most_active_merchant = (
+                {
+                    "merchant_id": most_active_merchant[0],
+                    "order_count": most_active_merchant[1],
+                }
+                if most_active_merchant
+                else None
+            )
 
             total_commodities_delivered = (
                 db.session.query(func.sum(Commodity.weight_kgs)).join(Order).scalar()
@@ -89,12 +101,15 @@ class MetricsResource(Resource):
 
             active_vehicles = Vehicle.query.filter_by(mark_deleted=False).count()
 
-            revenue_by_merchant = (
-                db.session.query(Merchant.id, func.sum(Order.price))
+            revenue_by_merchant = [
+                {"merchant_id": merchant_id, "revenue": revenue}
+                for merchant_id, revenue in db.session.query(
+                    Merchant.id, func.sum(Order.price)
+                )
                 .join(Order)
                 .group_by(Merchant.id)
                 .all()
-            )
+            ]
 
             data = {
                 "total_admins": total_admins,
@@ -118,24 +133,33 @@ class MetricsResource(Resource):
 
             start_date = datetime.now() - timedelta(days=30)
             user_creation_stats = {
-                "admins": db.session.query(
-                    func.date(Admin.created_at), func.count(Admin.id)
-                )
-                .filter(Admin.created_at >= start_date)
-                .group_by(func.date(Admin.created_at))
-                .all(),
-                "drivers": db.session.query(
-                    func.date(Driver.created_at), func.count(Driver.id)
-                )
-                .filter(Driver.created_at >= start_date)
-                .group_by(func.date(Driver.created_at))
-                .all(),
-                "merchants": db.session.query(
-                    func.date(Merchant.created_at), func.count(Merchant.id)
-                )
-                .filter(Merchant.created_at >= start_date)
-                .group_by(func.date(Merchant.created_at))
-                .all(),
+                "admins": [
+                    {"date": str(row[0]), "count": row[1]}
+                    for row in db.session.query(
+                        func.date(Admin.created_at), func.count(Admin.id)
+                    )
+                    .filter(Admin.created_at >= start_date)
+                    .group_by(func.date(Admin.created_at))
+                    .all()
+                ],
+                "drivers": [
+                    {"date": str(row[0]), "count": row[1]}
+                    for row in db.session.query(
+                        func.date(Driver.created_at), func.count(Driver.id)
+                    )
+                    .filter(Driver.created_at >= start_date)
+                    .group_by(func.date(Driver.created_at))
+                    .all()
+                ],
+                "merchants": [
+                    {"date": str(row[0]), "count": row[1]}
+                    for row in db.session.query(
+                        func.date(Merchant.created_at), func.count(Merchant.id)
+                    )
+                    .filter(Merchant.created_at >= start_date)
+                    .group_by(func.date(Merchant.created_at))
+                    .all()
+                ],
             }
 
             order_status_distribution = {
@@ -145,12 +169,15 @@ class MetricsResource(Resource):
                 "Cancelled": orders_by_status["Cancelled"],
             }
 
-            revenue_trends = (
-                db.session.query(func.date(Order.created_at), func.sum(Order.price))
+            revenue_trends = [
+                {"date": str(row[0]), "revenue": row[1]}
+                for row in db.session.query(
+                    func.date(Order.created_at), func.sum(Order.price)
+                )
                 .filter(Order.created_at >= start_date)
                 .group_by(func.date(Order.created_at))
                 .all()
-            )
+            ]
 
             graph_data = {
                 "user_creation_stats": user_creation_stats,

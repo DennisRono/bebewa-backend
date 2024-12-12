@@ -22,7 +22,7 @@ app.register_blueprint(metrics_bp, url_prefix="/admin/dash")
 app.register_blueprint(driver_bp, url_prefix='/driver')
 app.register_blueprint(merchant_bp)
 app.register_blueprint(order_bp)
-app.register_blueprint(review_bp)
+app.register_blueprint(review_bp, url_prefix="/reviews")
 
 api = Api(app)
 migrate = Migrate(app=app, db=db)
