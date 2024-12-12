@@ -153,7 +153,7 @@ class DriverResource(Resource):
         new_driver = Driver(
             id=str(uuid.uuid4()),
             phone_number=phone_number,
-            password=password,
+            password=generate_password_hash(password),
             mark_deleted=False,
             status=Driver_status_enum(status),
         )
