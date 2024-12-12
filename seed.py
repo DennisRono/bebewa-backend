@@ -5,11 +5,11 @@ from faker import Faker
 from werkzeug.security import generate_password_hash
 import logging
 
-# Logging setup
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize Faker
+
 fake = Faker()
 
 
@@ -29,6 +29,7 @@ def empty_tables(app, db):
                 Vehicle_Image,
                 Commodity,
                 Commodity_Image,
+                Review,
             )
 
             db.session.query(Admin).delete()
@@ -43,6 +44,7 @@ def empty_tables(app, db):
             db.session.query(Vehicle_Image).delete()
             db.session.query(Commodity).delete()
             db.session.query(Commodity_Image).delete()
+            db.session.query(Review).delete()
             db.session.commit()
         logger.info("Tables emptied successfully.")
     except Exception as e:
@@ -71,11 +73,13 @@ def seed_admins(app, db):
     return admins
 
 
-def seed_drivers(app, db, profiles):
+def seed_drivers(app, db):
     drivers = []
     try:
         with app.app_context():
-            from models import Driver, Driver_status_enum
+            from models import Driver, Driver_status_enum, User_profile
+
+            profiles = User_profile.query.all()
 
             for _ in range(10):
                 profile = rc(profiles)
@@ -96,7 +100,6 @@ def seed_drivers(app, db, profiles):
 
 
 def seed_addresses(app, db):
-    addresses = []
     try:
         with app.app_context():
             from models import Address
@@ -108,19 +111,18 @@ def seed_addresses(app, db):
                     street=fake.street_address(),
                 )
                 db.session.add(address)
-                addresses.append(address)
             db.session.commit()
         logger.info("Address table seeded successfully.")
     except Exception as e:
         logger.error(f"Error while seeding Address table: {e}")
-    return addresses
 
 
-def seed_merchants(app, db, addresses):
-    merchants = []
+def seed_merchants(app, db):
     try:
         with app.app_context():
-            from models import Merchant, Driver_status_enum
+            from models import Merchant, Driver_status_enum, Address
+
+            addresses = Address.query.all()
 
             for _ in range(10):
                 address = rc(addresses)
@@ -132,16 +134,13 @@ def seed_merchants(app, db, addresses):
                     address_id=address.id,
                 )
                 db.session.add(merchant)
-                merchants.append(merchant)
             db.session.commit()
         logger.info("Merchant table seeded successfully.")
     except Exception as e:
         logger.error(f"Error while seeding Merchant table: {e}")
-    return merchants
 
 
 def seed_recipients(app, db):
-    recipients = []
     try:
         with app.app_context():
             from models import Recipient
@@ -153,16 +152,13 @@ def seed_recipients(app, db):
                     email=fake.email(),
                 )
                 db.session.add(recipient)
-                recipients.append(recipient)
             db.session.commit()
         logger.info("Recipient table seeded successfully.")
     except Exception as e:
         logger.error(f"Error while seeding Recipient table: {e}")
-    return recipients
 
 
 def seed_user_profile(app, db):
-    profiles = []
     try:
         with app.app_context():
             from models import User_profile
@@ -179,12 +175,10 @@ def seed_user_profile(app, db):
                     mark_deleted=fake.boolean(),
                 )
                 db.session.add(profile)
-                profiles.append(profile)
             db.session.commit()
         logger.info("User Profile table seeded successfully.")
     except Exception as e:
         logger.error(f"Error while seeding User Profile table: {e}")
-    return profiles
 
 
 def seed_commodities(app, db):
@@ -210,10 +204,22 @@ def seed_commodities(app, db):
     return commodities
 
 
-def seed_orders(app, db, merchants, recipients, commodities, addresses):
+def seed_orders(app, db):
     try:
         with app.app_context():
-            from models import Order, Order_Status_Enum
+            from models import (
+                Order,
+                Order_Status_Enum,
+                Merchant,
+                Recipient,
+                Commodity,
+                Address,
+            )
+
+            merchants = Merchant.query.all()
+            recipients = Recipient.query.all()
+            commodities = Commodity.query.all()
+            addresses = Address.query.all()
 
             for _ in range(10):
                 order = Order(
@@ -234,21 +240,44 @@ def seed_orders(app, db, merchants, recipients, commodities, addresses):
         logger.error(f"Error while seeding Order table: {e}")
 
 
+def seed_reviews(app, db):
+    try:
+        with app.app_context():
+            from models import Review, Order
+
+            orders = Order.query.all()
+
+            for _ in range(10):
+                review = Review(
+                    rating=fake.random_int(min=0, max=5),
+                    comment=fake.text(max_nb_chars=20),
+                    order_id=rc(orders).id,
+                )
+                db.session.add(review)
+            db.session.commit()
+        logger.info("Review table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Review table: {e}")
+
+
 def seed_data():
     try:
         from app import app
-        from models import db
 
-        empty_tables(app, db)
-        seed_admins(app, db)
-        profiles = seed_user_profile(app, db)
-        seed_drivers(app, db, profiles)
-        addresses = seed_addresses(app, db)
-        merchants = seed_merchants(app, db, addresses)
-        recipients = seed_recipients(app, db)
-        commodities = seed_commodities(app, db)
-        seed_orders(app, db, merchants, recipients, commodities, addresses)
-        logger.info("Seeding complete.")
+        with app.app_context():
+            from models import db
+
+            empty_tables(app, db)
+            seed_admins(app, db)
+            seed_user_profile(app, db)
+            seed_drivers(app, db)
+            seed_addresses(app, db)
+            seed_merchants(app, db)
+            seed_recipients(app, db)
+            seed_commodities(app, db)
+            seed_orders(app, db)
+            seed_reviews(app, db)
+            logger.info("Seeding complete.")
     except Exception as e:
         logger.error(f"Error during seeding process: {e}")
 

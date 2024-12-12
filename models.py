@@ -310,12 +310,14 @@ class Order(db.Model, SerializerMixin):
     merchant = db.relationship("Merchant", back_populates="orders")
     driver = db.relationship("Driver", back_populates="deliveries")
     recipient = db.relationship("Recipient", back_populates="deliveries")
+    review = db.relationship("Review", back_populates="order")
 
     # serialize rules
     serialize_rules = (
         "-merchant.orders",
         "-driver.deliveries",
         "-recipient.deliveries",
+        "-review.order",
     )
 
 
@@ -335,6 +337,13 @@ class Review(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
+
+    order_id = db.Column(db.String, db.ForeignKey("orders.id"), nullable=False)
+
+    # relationships
+    order = db.relationship("Order", back_populates="review")
+
+    serialize_rules = ("-order.review",)
 
 
 # Subscriptions Table for Drivers
