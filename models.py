@@ -67,6 +67,7 @@ class Admin(db.Model, SerializerMixin):
 
 class Driver_status_enum(Enum):
     Active = "Active"
+    Inactive = "Inactive"
     Suspended = "Suspended"
 
 
@@ -82,6 +83,7 @@ class Driver(db.Model, SerializerMixin):
     )
     phone_number = db.Column(db.Integer, unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
+    current_balance = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(DateTime, nullable=False, default=func.now())
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
@@ -92,8 +94,10 @@ class Driver(db.Model, SerializerMixin):
     # relationships
     profile = db.relationship("User_profile", back_populates="driver")
     deliveries = db.relationship("Order", back_populates="driver")
+    subscription = db.relationship("Subscription_Payment", back_populates="driver")
+    bid = db.relationship("Bid", back_populates="driver")
     # serialize rules
-    serialize_rules = ("-profile.driver", "-password", "-deliveries.driver")
+    serialize_rules = ("-profile.driver", "-password", "-deliveries.driver", "-subscription.driver", '-bid.driver',)
 
 
 class Address(db.Model, SerializerMixin):
@@ -311,6 +315,7 @@ class Order(db.Model, SerializerMixin):
     driver = db.relationship("Driver", back_populates="deliveries")
     recipient = db.relationship("Recipient", back_populates="deliveries")
     review = db.relationship("Review", back_populates="order")
+    bid = db.relationship("Bid", back_populates="order")
 
     # serialize rules
     serialize_rules = (
@@ -318,6 +323,7 @@ class Order(db.Model, SerializerMixin):
         "-driver.deliveries",
         "-recipient.deliveries",
         "-review.order",
+        "-bid.order",
     )
 
 
@@ -345,5 +351,81 @@ class Review(db.Model, SerializerMixin):
 
     serialize_rules = ("-order.review",)
 
+class Subscription_status_enum(Enum):
+    Paid = "Paid"
+    Unpaid = "Unpaid"
+    Cancelled = "Cancelled"
+
 
 # Subscriptions Table for Drivers
+class Subscription_Payment(db.Model, SerializerMixin):
+    __tablename__ = "subscription_payment"
+
+    id = db.Column(
+        db.String,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    price = db.Column(db.Integer, nullable=False, default=0)
+    recurring_payment_date = db.Column(DateTime, nullable=False, default=func.now())
+    status = db.Column(db.Enum(Subscription_status_enum), nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
+    driver_id = db.Column(db.String, db.ForeignKey("drivers.id"), nullable=False)
+    transaction_id = db.Column(db.String, db.ForeignKey("transactions.id"), nullable=False)
+
+    driver = db.relationship("Driver", back_populates="subscription")
+    transaction = db.relationship("Transactions", back_populates="subscription")
+
+    serialize_rules = ('-driver.subscription', '-transaction.subscription',)
+
+class Transactions(db.Model, SerializerMixin):
+    __tablename__ = "transactions"
+
+    id = db.Column(
+        db.String,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    amount = db.Column(db.Integer, nullable=False)
+    phone_number = db.Column(db.Integer, nullable=False)
+    transaction_code = db.Column(db.String, nullable=False)
+    status = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
+    subscription = db.relationship("Subscription_Payment", back_populates="transaction")
+
+    serialize_rules = ('-subscription.transaction',)
+
+# Bidding Table
+class Bid(db.Model, SerializerMixin):
+    __tablename__ = "bids"
+
+    id = db.Column(
+        db.String,
+        unique=True,
+        nullable=False,
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
+    status = db.Column(db.String, nullable=False)
+    created_at = db.Column(DateTime, nullable=False, default=func.now())
+    updated_at = db.Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
+
+    driver_id = db.Column(db.String, db.ForeignKey("drivers.id"), nullable=False)
+    order_id = db.Column(db.String, db.ForeignKey("orders.id"), nullable=False)
+
+    driver = db.relationship("Driver", back_populates="bid")
+    order = db.relationship("Order", back_populates="bid")
+
+    serialize_rules = ('-driver.bid', '-order.bid',)

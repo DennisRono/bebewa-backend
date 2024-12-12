@@ -1,3 +1,4 @@
+from datetime import date, datetime
 from random import choice as rc
 import random
 import string
@@ -259,6 +260,67 @@ def seed_reviews(app, db):
     except Exception as e:
         logger.error(f"Error while seeding Review table: {e}")
 
+def seed_subscription_payment(app, db):
+    try:
+        with app.app_context():
+            from models import Subscription_Payment, Subscription_status_enum, Driver, Transactions
+
+            drivers = Driver.query.all()
+            transactions = Transactions.query.all()
+
+            for _ in range(10):
+                subscription_payment = Subscription_Payment(
+                    price=fake.random_int(min=0, max=2000),
+                    recurring_payment_date = fake.date_between_dates(date_start=datetime.now(), date_end=datetime(datetime.now().year + 1, 12, 31)),
+                    status=random.choice([status for status in Subscription_status_enum]),
+                    driver_id=rc(drivers).id,
+                    transaction_id=rc(transactions).id
+                )
+                db.session.add(subscription_payment)
+            db.session.commit()
+        logger.info("Subscription Payment table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Subscription Payment table: {e}")
+
+def seed_transactions(app, db):
+    try:
+        with app.app_context():
+            from models import Transactions
+
+            for _ in range(10):
+                transaction = Transactions(
+                    amount=fake.random_int(min=0, max=2000),
+                    phone_number=fake.random_number(digits=9),
+                    transaction_code="".join(
+                        random.choices(string.ascii_uppercase + string.digits, k=10)
+                    ),
+                    status=random.choice(['Completed', 'Pending', 'Cancelled']),
+                )
+                db.session.add(transaction)
+            db.session.commit()
+        logger.info("Transactions table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Transactions table: {e}")
+
+def seed_bids(app, db):
+    try:
+        with app.app_context():
+            from models import Bid, Driver, Order
+
+            drivers = Driver.query.all()
+            orders = Order.query.all()
+            for _ in range(10):
+                bid = Bid(
+                    status=random.choice(['Successful', 'Rejected']),
+                    driver_id=rc(drivers).id,
+                    order_id=rc(orders).id
+                )
+                db.session.add(bid)
+            db.session.commit()
+        logger.info("Bid table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Bid table: {e}")
+
 
 def seed_data():
     try:
@@ -266,8 +328,9 @@ def seed_data():
 
         with app.app_context():
             from models import db
-
-            empty_tables(app, db)
+            db.drop_all()
+            db.create_all()
+            #empty_tables(app, db)
             seed_admins(app, db)
             seed_user_profile(app, db)
             seed_drivers(app, db)
@@ -277,6 +340,9 @@ def seed_data():
             seed_commodities(app, db)
             seed_orders(app, db)
             seed_reviews(app, db)
+            seed_transactions(app, db)
+            seed_subscription_payment(app, db)
+            seed_bids(app, db)
             logger.info("Seeding complete.")
     except Exception as e:
         logger.error(f"Error during seeding process: {e}")
