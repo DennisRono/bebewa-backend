@@ -16,7 +16,7 @@ class Get_Driver_Data(Resource):
     def get(self):
         try:
             driver=Driver.query.filter_by(id=get_jwt_identity()).first()
-            if not driver:
+            if not driver or driver.mark_deleted==True:
                 return make_response({"msg":"Driver not found"},400)
             return make_response(driver.to_dict(),200)
         except Exception as e:
@@ -43,7 +43,7 @@ class Register_Vehicle(Resource):
         number_plate=data.get("number_plate")
         try:
             vehicle=Vehicle.query.filter_by(number_plate=number_plate).first()
-            if vehicle:
+            if vehicle and vehicle.mark_deleted==False:
                 return make_response({"msg":"Vehicle already exists"},400)
             new_vehicle=Vehicle(
                 number_plate=number_plate,
@@ -71,7 +71,7 @@ class Vehicle_By_Number_Plate(Resource):
     def get(self,plate):
         try:
             vehicle=Vehicle.query.filter_by(number_plate=plate).first()
-            if vehicle:
+            if vehicle and vehicle.mark_deleted==False:
                 return make_response(vehicle.to_dict(),200)
             return make_response({"msg":"Vehicle doesnt exist"})
         except Exception as e:
@@ -83,7 +83,7 @@ class Vehicle_By_Number_Plate(Resource):
         data=request.get_json()
         try:
             vehicle=Vehicle.query.filter_by(number_plate=plate).first()
-            if not vehicle:
+            if not vehicle or vehicle.mark_deleted==True:
                 return make_response({"msg":f"Vehicle plate number{plate} is not registered"},400)
             if "mark_deleted" in data:
                 setattr(vehicle,"mark_deleted",data.get("mark_deleted"))

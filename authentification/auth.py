@@ -46,7 +46,7 @@ class Driver_Login(Resource):
         password=data.get("password")
         try:
             driver=Driver.query.filter_by(phone_number=phone_number).first()
-            if not driver:
+            if not driver or driver.mark_deleted==True:
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(driver.password, password):
                 return make_response({"msg":"Wrong password"},400)
@@ -68,7 +68,7 @@ class Merchant_Login(Resource):
         password=data.get("password")
         try:
             merchant=Merchant.query.filter_by(phone_number=phone_number).first()
-            if not merchant:
+            if not merchant or merchant.mark_deleted==True:
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(merchant.password, password):
                 return make_response({"msg":"Wrong password"},400)
@@ -90,7 +90,7 @@ class Admin_Login(Resource):
         password=data.get("password")
         try:
             admin=Admin.query.filter_by(email=email).first()
-            if not admin:
+            if not admin or admin.mark_deleted==True:
                 return make_response({"msg":f"{email} not registered"},400)
             if not check_password_hash(admin.password, password):
                 return make_response({"msg":"Wrong password"},400)
