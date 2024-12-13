@@ -65,7 +65,7 @@ vehicle_parser.add_argument("model_name", type=str, required=True, help="Model I
 class AdminResource(Resource):
     def get(self):
         try:
-            admins = Admin.query.filter_by(mark_as_deleted=False).all()
+            admins = Admin.query.filter_by(mark_deleted=False).all()
             return jsonify([admin.to_dict() for admin in admins])
         except Exception as e:
             return make_response({"message": str(e)}, 500)
@@ -83,7 +83,7 @@ class AdminResource(Resource):
             id=str(uuid.uuid4()),
             email=email,
             password=generate_password_hash(password),
-            mark_as_deleted=False,
+            mark_deleted=False,
             status=Admin_status_enum(status),
         )
         try:
@@ -102,7 +102,7 @@ class AdminResource(Resource):
 class AdminDetailResource(Resource):
     def get(self, admin_id):
         try:
-            admin = Admin.query.filter_by(id=admin_id, mark_as_deleted=False).first()
+            admin = Admin.query.filter_by(id=admin_id, mark_deleted=False).first()
             if not admin:
                 return make_response({"message": "Admin not found"}, 404)
             return jsonify(admin.to_dict())
@@ -111,7 +111,7 @@ class AdminDetailResource(Resource):
 
     def patch(self, admin_id):
         try:
-            admin = Admin.query.filter_by(id=admin_id, mark_as_deleted=False).first()
+            admin = Admin.query.filter_by(id=admin_id, mark_deleted=False).first()
             if not admin:
                 return make_response({"message": "Admin not found"}, 404)
 
@@ -134,11 +134,11 @@ class AdminDetailResource(Resource):
 
     def delete(self, admin_id):
         try:
-            admin = Admin.query.filter_by(id=admin_id, mark_as_deleted=False).first()
+            admin = Admin.query.filter_by(id=admin_id, mark_deleted=False).first()
             if not admin:
                 return make_response({"message": "Admin not found"}, 404)
 
-            admin.mark_as_deleted = True
+            admin.mark_deleted = True
             db.session.commit()
             return make_response({"message": "Admin deleted successfully"}, 200)
         except Exception as e:
