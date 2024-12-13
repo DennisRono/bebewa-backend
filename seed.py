@@ -62,7 +62,7 @@ def seed_admins(app, db):
                 admin = Admin(
                     email=fake.email(),
                     password=generate_password_hash(fake.password()),
-                    mark_as_deleted=fake.boolean(),
+                    mark_deleted=fake.boolean(),
                     status=random.choice([status for status in Admin_status_enum]),
                 )
                 db.session.add(admin)
@@ -204,6 +204,26 @@ def seed_commodities(app, db):
         logger.error(f"Error while seeding Commodity table: {e}")
     return commodities
 
+def seed_commodity_images(app, db):
+    commodities = []
+    try:
+        with app.app_context():
+            from models import Commodity,Commodity_Image
+            commodities = Commodity.query.all()
+
+            for _ in range(10):
+                commodity = Commodity_Image(
+                    image_url=fake.image_url(),
+                    commodity_id=rc(commodities).id
+                )
+                db.session.add(commodity)
+                commodities.append(commodity)
+            db.session.commit()
+        logger.info("Commodity Images table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Commodity Images table: {e}")
+    return commodities
+
 
 def seed_orders(app, db):
     try:
@@ -322,6 +342,78 @@ def seed_bids(app, db):
     except Exception as e:
         logger.error(f"Error while seeding Bid table: {e}")
 
+def seed_models(app, db):
+    try:
+        with app.app_context():
+            from models import Models
+
+            for _ in range(10):
+                order = Models(
+                    name= fake.name(),
+                )
+                db.session.add(order)
+            db.session.commit()
+        logger.info("Models table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Models table: {e}")
+
+def seed_makes(app, db):
+    try:
+        with app.app_context():
+            from models import Make, Models
+            models = Models.query.all()
+
+            for _ in range(10):
+                order = Make(
+                    name= fake.name(),
+                    model_id=rc(models).id
+                )
+                db.session.add(order)
+            db.session.commit()
+        logger.info("Make table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Make table: {e}")
+
+def seed_vehicles(app, db):
+    try:
+        with app.app_context():
+            from models import Make, Models, Vehicle, Driver
+            models = Models.query.all()
+            makes = Make.query.all()
+            drivers = Driver.query.all()
+
+            for _ in range(10):
+                order = Vehicle(
+                    number_plate=fake.license_plate(),
+                    make_name=rc(makes).id,
+                    model_name=rc(models).id,
+                    color=fake.color_name(),
+                    driver_id=rc(drivers).id,
+                    tonnage=random.uniform(1.0, 10.0),
+                    mark_deleted=fake.boolean()
+                )
+                db.session.add(order)
+            db.session.commit()
+        logger.info("Vehicles table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Vehicles table: {e}")
+
+def seed_vehicle_images(app, db):
+    try:
+        with app.app_context():
+            from models import Vehicle, Vehicle_Image
+            vehicles = Vehicle.query.all()
+
+            for _ in range(10):
+                order = Vehicle_Image(
+                    image_url=fake.image_url(),
+                    vehicle_id=rc(vehicles).id
+                )
+                db.session.add(order)
+            db.session.commit()
+        logger.info("Vehicles Images table seeded successfully.")
+    except Exception as e:
+        logger.error(f"Error while seeding Vehicles Images table: {e}")
 
 def seed_data():
     try:
@@ -339,11 +431,16 @@ def seed_data():
             seed_merchants(app, db)
             seed_recipients(app, db)
             seed_commodities(app, db)
+            seed_commodity_images(app, db)
             seed_orders(app, db)
             seed_reviews(app, db)
             seed_transactions(app, db)
             seed_subscription_payment(app, db)
             seed_bids(app, db)
+            seed_models(app, db)
+            seed_makes(app, db)
+            seed_vehicles(app, db)
+            seed_vehicle_images(app, db)
             logger.info("Seeding complete.")
     except Exception as e:
         logger.error(f"Error during seeding process: {e}")
