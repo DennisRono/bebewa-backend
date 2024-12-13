@@ -90,7 +90,7 @@ class Driver(db.Model, SerializerMixin):
     )
     mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False, default="Active")
-    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"), unique=True,)
     # relationships
     profile = db.relationship("User_profile", back_populates="driver")
     deliveries = db.relationship("Order", back_populates="driver")
@@ -129,7 +129,7 @@ class Merchant(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
-    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"), unique=True,)
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"))
     # relationships
     profile = db.relationship("User_profile", back_populates="merchant")
