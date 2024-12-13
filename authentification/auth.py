@@ -29,7 +29,7 @@ class New_Access_Token(Resource):
             user_id=get_jwt_identity()
             if not user_id:
                 return make_response({"msg":"Invalid request"},400)
-            access_token=create_access_token(id=user_id)
+            access_token=create_access_token(identity=user_id)
             return make_response({"access_token":access_token},200)
         except Exception as e:
             print(e)
@@ -55,6 +55,7 @@ class Driver_Login(Resource):
                 "refresh_token":create_refresh_token(identity=driver.id),
             },201)
         except Exception as e:
+            print(e)
             return make_response({"msg":"Internal server error"},500)
 api.add_resource(Driver_Login,"/driver-login", endpoint="driver-login")
 
@@ -90,7 +91,7 @@ class Admin_Login(Resource):
         password=data.get("password")
         try:
             admin=Admin.query.filter_by(email=email).first()
-            if not admin or admin.mark_deleted==True:
+            if not admin or admin.mark_as_deleted==True:
                 return make_response({"msg":f"{email} not registered"},400)
             if not check_password_hash(admin.password, password):
                 return make_response({"msg":"Wrong password"},400)

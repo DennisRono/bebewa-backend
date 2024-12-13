@@ -35,7 +35,7 @@ api.add_resource(Get_Driver_Data,'/driver-data',endpoint="driver-data")
 
 #resource that enables the driver to register their vehicle
 class Register_Vehicle(Resource):
-    # @jwt_required()
+    @jwt_required()
     def post(self):
         #data passed in is a form data which contains json data and files 
         #gets files labelled under the key "images"
@@ -96,7 +96,7 @@ class Vehicle_By_Number_Plate(Resource):
             vehicle=Vehicle.query.filter_by(number_plate=plate).first()
             if vehicle and vehicle.mark_deleted==False:
                 return make_response(vehicle.to_dict(),200)
-            return make_response({"msg":"Vehicle doesnt exist"})
+            return make_response({"msg":"Vehicle doesnt exist"},400)
         except Exception as e:
             print(e)
             return make_response({"msg":"Server error"},500)
@@ -143,7 +143,7 @@ class Place_Get_All_Bid(Resource):
     @jwt_required()
     def get(self): #returns all bids by logged in driver
         try:
-            my_bids=Bid.query.filter_by(driver_id=get_jwt_identity()).first()
+            my_bids=Bid.query.filter_by(driver_id=get_jwt_identity()).all()
             return make_response([bid.to_dict() for bid in my_bids],200)
         except Exception as e:
             print(e)
@@ -155,7 +155,7 @@ class Place_Get_All_Bid(Resource):
             return make_response({"msg":"Required data is missing"},400)
         try:
             new_bid=Bid(
-                Status="Pending",
+                status="Pending",
                 price=data.get("price"),
                 driver_id=get_jwt_identity(),
                 order_id=data.get("order_id"),

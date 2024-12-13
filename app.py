@@ -11,9 +11,11 @@ from drivers.driver import driver_bp
 from merchants.merchant import merchant_bp
 from orders.order import order_bp
 from reviews.review import review_bp
+from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
 CORS(app)
+JWTManager(app=app)
 app.config.from_object(Config)
 
 app.register_blueprint(auth)
