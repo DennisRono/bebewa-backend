@@ -28,7 +28,7 @@ class User_profile(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
-    mark_deleted = db.Column(db.Boolean, nullable=False)
+    mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
 
     # relationships
     driver = db.relationship("Driver", back_populates="profile")
@@ -54,7 +54,7 @@ class Admin(db.Model, SerializerMixin):
     )
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
-    mark_as_deleted = db.Column(db.Boolean, nullable=False)
+    mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(DateTime, nullable=False, default=func.now())
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
@@ -88,7 +88,7 @@ class Driver(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
-    mark_deleted = db.Column(db.Boolean, nullable=False)
+    mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False, default="Active")
     user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
     # relationships
@@ -123,7 +123,7 @@ class Merchant(db.Model, SerializerMixin):
     )
     phone_number = db.Column(db.Integer, unique=True, nullable=False)
     password = db.Column(db.String, nullable=False)
-    mark_deleted = db.Column(db.Boolean, nullable=False)
+    mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False)
     created_at = db.Column(DateTime, nullable=False, default=func.now())
     updated_at = db.Column(
@@ -200,7 +200,7 @@ class Vehicle(db.Model, SerializerMixin):
     color = db.Column(db.String, nullable=False)
     driver_id = db.Column(db.String, db.ForeignKey("drivers.id"))
     tonnage = db.Column(db.Integer, nullable=False)
-    mark_deleted = db.Column(db.Boolean, nullable=False)
+    mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(DateTime, nullable=False, default=func.now())
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
@@ -421,6 +421,7 @@ class Bid(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
+    price = db.Column(db.Integer, nullable=False)
 
     driver_id = db.Column(db.String, db.ForeignKey("drivers.id"), nullable=False)
     order_id = db.Column(db.String, db.ForeignKey("orders.id"), nullable=False)
