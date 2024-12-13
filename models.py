@@ -421,6 +421,7 @@ class Bid(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
+    price = db.Column(db.Integer, nullable=False)
 
     driver_id = db.Column(db.String, db.ForeignKey("drivers.id"), nullable=False)
     order_id = db.Column(db.String, db.ForeignKey("orders.id"), nullable=False)

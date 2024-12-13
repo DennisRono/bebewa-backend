@@ -312,6 +312,7 @@ def seed_bids(app, db):
             for _ in range(10):
                 bid = Bid(
                     status=random.choice(['Successful', 'Rejected']),
+                    price=fake.random_int(min=0, max=2000),
                     driver_id=rc(drivers).id,
                     order_id=rc(orders).id
                 )
