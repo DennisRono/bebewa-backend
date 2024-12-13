@@ -23,15 +23,15 @@ api = Api(metrics_bp)
 class MetricsResource(Resource):
     def get(self):
         try:
-            total_admins = Admin.query.filter_by(mark_as_deleted=False).count()
+            total_admins = Admin.query.filter_by(mark_deleted=False).count()
             total_drivers = Driver.query.filter_by(mark_deleted=False).count()
             total_merchants = Merchant.query.filter_by(mark_deleted=False).count()
 
             active_admins = Admin.query.filter_by(
-                mark_as_deleted=False, status=Admin_status_enum.Active
+                mark_deleted=False, status=Admin_status_enum.Active
             ).count()
             suspended_admins = Admin.query.filter_by(
-                mark_as_deleted=False, status=Admin_status_enum.Suspended
+                mark_deleted=False, status=Admin_status_enum.Suspended
             ).count()
 
             active_drivers = Driver.query.filter_by(
