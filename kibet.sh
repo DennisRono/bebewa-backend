@@ -22,3 +22,6 @@ echo "Applying the migrations..."
 flask db upgrade head
 
 echo "Database migration completed successfully!"
+
+echo "seeding database"
+python seed.py
