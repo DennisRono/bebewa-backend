@@ -91,7 +91,7 @@ class Admin_Login(Resource):
         password=data.get("password")
         try:
             admin=Admin.query.filter_by(email=email).first()
-            if not admin or admin.mark_as_deleted==True:
+            if not admin or admin.mark_deleted==True:
                 return make_response({"msg":f"{email} not registered"},400)
             if not check_password_hash(admin.password, password):
                 return make_response({"msg":"Wrong password"},400)
