@@ -8,6 +8,7 @@ __pycache__/
 *$py.class
 bebewa
 migrations
+bebewa-backend
 
 # C extensions
 *.so
