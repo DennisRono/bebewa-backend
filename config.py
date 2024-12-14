@@ -29,4 +29,4 @@ class Config:
     cloudinary_cloud_name=os.getenv("cloudinary_cloud_name")
     cloudinary_api_key=os.getenv("cloudinary_api_key")
     cloudinary_api_secret=os.getenv("cloudinary_api_secret")
-    
+
