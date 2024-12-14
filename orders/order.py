@@ -20,11 +20,12 @@ cloudinary.config(
     
 # Creating an Orders Resource
 class Orders(Resource):
-    # a get method to get all orders
+    # a get method to get all orders specific to a merchant
+    @jwt_required()
     def get(self):
         try:
             # querying the database to get all the orders
-            orders = Order.query.all()
+            orders = Order.query.filter_by(merchant_id=get_jwt_identity()).all()
             # Looping through the orders to get one order to a dictionary
             order_dict = [order.to_dict() for order in orders]
             #  creating and returning a response 
@@ -136,6 +137,15 @@ api.add_resource(Orders, "/orders", endpoint="orders")
 
 #update the status of an order
 class Order_By_Id(Resource):
+    @jwt_required()
+    def get(self,id): #returns an order specific to a merchant
+        try:
+            order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
+            if not order:
+                return make_response({"msg":"Order does not exist"},400)
+            return make_response(order.to_dict(),200)
+        except Exception:
+            return make_response({"msg":"Server error"},500)
     @jwt_required()
     def patch(self,id):
         order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
