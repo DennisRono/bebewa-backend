@@ -191,12 +191,14 @@ def seed_orders(app, db):
                 Recipient,
                 Commodity,
                 Address,
+                Driver
             )
 
             merchants = Merchant.query.all()
             recipients = Recipient.query.all()
             commodities = Commodity.query.all()
             addresses = Address.query.all()
+            drivers = Driver.query.all()
 
             for _ in range(10):
                 try:
@@ -208,6 +210,7 @@ def seed_orders(app, db):
                         created_at=fake.date_this_year(),
                         price=fake.random_int(min=10, max=1000),
                         merchant_id=rc(merchants).id,
+                        driver_id=rc(drivers).id,
                         address_id=rc(addresses).id,
                         recipient_id=rc(recipients).id,
                     )

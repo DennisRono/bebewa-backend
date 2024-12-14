@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, make_response
 from flask_restful import Api, Resource
-from sqlalchemy import desc, func, case
+from sqlalchemy import desc, func
 from datetime import datetime, timedelta
 from sqlalchemy.orm import aliased
 
@@ -112,28 +112,6 @@ class MetricsResource(Resource):
             # Active vehicles
             active_vehicles = Vehicle.query.filter_by(mark_deleted=False).count()
 
-            # Revenue by merchant
-            # revenue_by_merchant = [
-            #     {
-            #         "merchant_name": merchant_name if merchant_name else "No Profile",
-            #         "merchant_id": merchant_id,
-            #         "orders_count": orders_count,
-            #         "revenue": revenue if revenue else 0,
-            #     }
-            #     for merchant_name, merchant_id, orders_count, revenue in (
-            #         db.session.query(
-            #             User_profile.full_name.label("merchant_name"),
-            #             Merchant.id.label("merchant_id"),
-            #             func.count(Order.id).label("orders_count"),
-            #             func.coalesce(func.sum(Order.price), 0).label("revenue"),
-            #         )
-            #         .outerjoin(Merchant, Merchant.user_profile_id == User_profile.id)
-            #         .outerjoin(Order, Order.merchant_id == Merchant.id)
-            #         .group_by(User_profile.full_name, Merchant.id, Order.price)
-            #         .all()
-            #     )
-            # ]
-
             revenue_by_merchant = [
                 {
                     "merchant_name": merchant_name,
@@ -154,11 +132,6 @@ class MetricsResource(Resource):
                     .all()
                 )
             ]
-
-            # Log the result to debug
-            for merchant in revenue_by_merchant:
-                print(f'Merchant: {merchant["merchant_name"]}, ID: {merchant["merchant_id"]}, Revenue: {merchant["revenue"]}, Orders: {merchant["order_count"]}')
-
 
 
             # Metrics data
