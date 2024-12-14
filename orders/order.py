@@ -151,7 +151,6 @@ class Orders(Resource):
             error_message = f"An unexpected error occured: {str(e)}"
             return make_response({"error":error_message},500)
 
-        pass
 
 
 api.add_resource(Orders, "/orders", endpoint="orders")

@@ -203,7 +203,24 @@ class MerchantsById(Resource):
 
             if merchant:
                 # making the merchant to a dictionary
-                merchant_dict = merchant.to_dict()
+                merchant_dict = merchant.to_dict(only = ("profile.full_name",
+            "profile.id", 
+            "profile.email", 
+            "profile.phone_number",
+            "profile.kra_pin",
+            "profile.national_id",
+            "address","phone_number",
+            "status", 
+            "orders.id",
+            "orders.status",
+            "orders.commodity_id",
+            "orders.dispatch_time",
+            "orders.arrival_time",
+            "orders.price",
+            "orders.merchant_id",
+            "orders.address_id",
+            "orders.recipient",
+            "orders.driver_id"))
                 # creating and returning a response based on the merchants dict
                 response = make_response(merchant_dict, 200)
                 return response
