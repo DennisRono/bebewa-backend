@@ -6,8 +6,10 @@ __pycache__/
 *.pyo
 *.py[cod]
 *$py.class
-bebewa
 migrations
+bebewa
+bebewa-backend
+
 
 # C extensions
 *.so
