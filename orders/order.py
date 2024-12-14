@@ -6,6 +6,8 @@ import cloudinary
 import cloudinary.uploader
 from config import Config
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
+import json
 
 order_bp = Blueprint("order", __name__)
 api = Api(order_bp)
@@ -15,7 +17,7 @@ cloudinary.config(
     api_key=Config.cloudinary_api_key,
     api_secret=Config.cloudinary_api_secret
 )
-
+    
 # Creating an Orders Resource
 class Orders(Resource):
     # a get method to get all orders
@@ -41,42 +43,46 @@ class Orders(Resource):
     @jwt_required()
     def post(self):
         try:
-            data = request.get_json()
-
-            # Ensuring that the required fields are not missing 
-            if not data.get("name") or data.get("weight_kgs"):
-                # creating and returning a response based on the response_body
-                response_body = {"message":"The name or the wight in kgs is Required"}
-                return make_response(response_body, 400)
-
+            order_data = request.form.get("order_data") #get non-file data under the key order_data
+            images = request.files.getlist("images") #get files data under the key images
+            if not order_data:
+                return make_response({"msg":"Order data is required"},400)
+            data=json.loads(order_data) #convert non-file data into accepatble json format
+            # data is a dict which includes keys to other dicts: commodity_data, recipient_data
+            #ascertain that the keys pointing to this dicts are present
+            if not all(attr in data for attr in ["commodity_data","recipient_data"]):
+                return make_response({"msg":"Required commodity and recipient data is missing"},400)
+            commodity_data=data.get("commodity_data")
+            recipient_data=data.get("recipient_data")
+            #validate commodity data
+            if not all(attr in commodity_data for attr in ["name","weight_kgs"]):
+                return make_response({"msg":"Name and commodity weight required"},400)
+            # validate recipients data
+            if not all(attr in recipient_data for attr in ["full_name","phone_number"]):
+                return make_response({"msg":"Recipient name and phone number are required"},400)
+            phone_number=recipient_data.get("phone_number")
+            if not str(phone_number).isdigit() or len(str(phone_number))!=9:
+                return make_response({"msg":"Invalid phone number format"},400)
             #  creating a commodity based on the users request
             new_commodity = Commodity(
-                name = data["name"],
-                weight_kgs = data["weight_kgs"],
-                length_cm = data["length_cm"],
-                width_cm = data["width_cm"],
-                height_cm = data["height_cm"]
+                name = commodity_data.get("name"),
+                weight_kgs = commodity_data["weight_kgs"],
+                length_cm = commodity_data.get("length_cm",0),
+                width_cm = commodity_data.get("width_cm",0),
+                height_cm = commodity_data.get("height_cm",0)
             )
-
             #  adding and commiting the new_commodity to the database 
             db.session.add(new_commodity)
-            db.session.commit()
+            db.session.flush()
 
-            # Handling image uploads
-            images = request.files.getlist("images")
-
-            # List to store Cloudinary image URLs
-            image_urls = []
-
+            # Upload images related to the newly added commodity if the images exist
+            image_urls = []  # List to store Cloudinary image URLs
             if images and len(images)> 0:
                 # Upload each image to Cloudinary and store the URLs
                 for file in images:
                     if file.filename!="" and file.filename in ["jpg","png","jpeg"]:
                         result = cloudinary.uploader.upload(file)
                         image_urls.append(result.get("url"))
-                    else:
-                        return make_response({"message": "Only jpg, jpeg, and png files are allowed"}, 400)
-
                 # Create and associate commodity images with the newly created commodity
                 for url in image_urls:
                     new_commodity_image = Commodity_Image(
@@ -84,74 +90,84 @@ class Orders(Resource):
                         commodity_id=new_commodity.id,
                     )
                     db.session.add(new_commodity_image)
-            db.session.commit()
+                db.session.flush()
 
-            # getting the merchant id based on the merchant who is logged in
-            merchant_data = Merchant.query.filter_by(id = get_jwt_identity()).first()
-            if not merchant_data:
-                return make_response({"message":"merchant data is required"})
-            
-            # getting the recepient details
-            recipient_data = data.get("recipient")
-            if not recipient_data:
-                return make_response({"message":"recipient data is required"},400)
-            
-            # Ensuring that the required fields are not missing 
-            if not data.get("full_name") or data.get("phone_number"):
-                # creating and returning a response based on the response_body
-                response_body = {"message":"The full name or the phone number is Required"}
-                return make_response(response_body, 400)
-            
+            # create a recipient to whom the order will be delivered
             new_recipient = Recipient(
-                full_name = data["full_name"],
-                phone_number = data["phone_number"],
-                email = data["email"]
+                full_name = recipient_data["full_name"],
+                phone_number = recipient_data["phone_number"]
+                # email = recipient_data["email"]
             )
-
-            # adding and commiting the new_recepient to the database
             db.session.add(new_recipient)
-            db.session.commit()
+            db.session.flush()
 
+            # getting the merchant data based on the merchant who is logged in
+            merchant_data = Merchant.query.filter_by(id = get_jwt_identity()).first()
+           
             # creating a new order
             new_order = Order(
                 status=Order_Status_Enum("Pending_dispatch").value,
                 commodity_id = new_commodity.id,
                 merchant_id = merchant_data.id,
-                recipient_id = new_recipient.id
+                recipient_id = new_recipient.id,
+                created_at=datetime.now(),
+                address_id=merchant_data.address_id
             )
             # adding and commiting the new_recepient to the database
             db.session.add(new_order)
             db.session.commit()
 
-            # Convert the new entities to dictionaries
-            new_commodity_dict = new_commodity.to_dict()
-            new_recipient_dict = new_recipient.to_dict()
-            new_order_dict = new_order.to_dict()
-
-
-            # Create the response body with the newly created objects
-            response_body = {
-                "order": new_order_dict,
-                "commodity": new_commodity_dict,
-                "recipient": new_recipient_dict,
-                "message": "Order created successfully"
-            }
-
             # Return the response with status 201 (Created)
-            return make_response(response_body, 201)
+            return make_response(new_order.to_dict(), 201)
 
         except DatabaseError as e:
+            print(e)
             # creating and returning a database error message
             db.session.rollback()
             error_message = f"Database error : {str(e)}"
             return make_response({"error":error_message},500)
         except Exception as e:
+            print(e)
             # creating and returning an unexpected error message 
             db.session.rollback()
             error_message = f"An unexpected error occured: {str(e)}"
             return make_response({"error":error_message},500)
-
-        pass
-
-
 api.add_resource(Orders, "/orders", endpoint="orders")
+
+#update the status of an order
+class Order_By_Id(Resource):
+    @jwt_required()
+    def patch(self,id):
+        order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
+        if not order:
+            return make_response({"msg":"Order does not exist"},400)
+        data=request.get_json()
+        try:
+            if "driver_id" in data and data.get("driver_id"):
+                setattr(order,"driver_id",data.get("driver_id"))
+            if "recipient_data" in data:
+                recipient_data=data.get("recipient_data")
+                recipient=Recipient.query.filter_by(id=order.recipient_id).first()
+                for attr in recipient_data:
+                    if recipient_data.get(attr) and recipient_data.get(attr)!="":
+                        setattr(recipient,attr,recipient_data.get(attr))
+            if "status" in data and Order_Status_Enum(data.get("status")).value:
+                setattr(order,"status",Order_Status_Enum(data.get("status")).value)
+            db.session.commit()
+            return make_response(order.to_dict(),200)
+        except Exception as e:
+            db.session.rollback()
+            return make_response({"msg":"Error updating order details"},500)
+
+    @jwt_required()
+    def delete(self,id):
+        try:
+            order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
+            if order and order.status=="Pending Dispatch":
+                db.session.delete(order)
+                db.session.commit()
+                return make_response({"msg":"Order deleted successfully"},204)
+            return make_response({"msg":"Delete failed"},400)
+        except Exception as e:
+            return make_response({"msg":"Server error"},500)
+api.add_resource(Order_By_Id,'/order/<string:id>')
