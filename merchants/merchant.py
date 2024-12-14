@@ -3,6 +3,7 @@ from flask_restful import Api, Resource
 from models import Merchant,db, User_profile, Address, Driver_status_enum
 from sqlalchemy.exc import DatabaseError
 from werkzeug.security import generate_password_hash
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 merchant_bp = Blueprint("merchant", __name__)
 api = Api(merchant_bp)
@@ -25,7 +26,25 @@ class Merchants(Resource):
             # querying the merchants database to get all merchants
             merchants = Merchant.query.all()
             # Looping through all merchants to get one merchant and converting the merchant to a dictionary
-            merchant_dict = [merchant.to_dict() for merchant in merchants]
+            merchant_dict = [merchant.to_dict(only = ("profile.full_name",
+            "profile.id", 
+            "profile.email", 
+            "profile.phone_number",
+            "profile.kra_pin",
+            "profile.national_id",
+            "address","phone_number",
+            "status", 
+            "orders.id",
+            "orders.status",
+            "orders.commodity_id",
+            "orders.dispatch_time",
+            "orders.arrival_time",
+            "orders.price",
+            "orders.merchant_id",
+            "orders.address_id",
+            "orders.recipient",
+            "orders.driver_id")
+            ) for merchant in merchants]
             # creating and returning a response 
             response = make_response(merchant_dict,200)
             return response
@@ -41,6 +60,7 @@ class Merchants(Resource):
     #  validating the phone_number to be exactly 10 digits
     def is_valid_phone_number(self, phone_number):
         return phone_number.isdigit() and len(phone_number) == 9
+    
     
     # validating the id_number to be exactly 8 digits
     def is_valid_national_id(self, national_id):
@@ -59,6 +79,7 @@ class Merchants(Resource):
             phone_number = data.get("phone_number")
 
             if not phone_number or not self.is_valid_phone_number(phone_number):
+                print(self.is_valid_phone_number(phone_number))
                 # creating and returning a response 
                 response_body = {"message": "Phone number must be exactly 9 digits."}
                 response = make_response(response_body,400)
@@ -139,11 +160,11 @@ class Merchants(Resource):
             # creating a password based on the users input
             password = generate_password_hash(data["password"])
             new_merchant = Merchant(
-                id = new_user.id,
+                # id = new_user.id,
                 phone_number=phone_number,
                 password=password, 
                 mark_deleted=False,
-                status=Driver_status_enum(data["status"]).value, 
+                status=Driver_status_enum("Active").value, 
                 user_profile_id=new_user.id,
                 address_id=new_address.id
             )
@@ -162,9 +183,11 @@ class Merchants(Resource):
             return response
         except DatabaseError as e:
             # creating and returning a database error message
+            db.session.rollback()
             error_message = f"Database error: {str(e)}"
             return make_response({"error":error_message},500)
         except Exception as e:
+            db.session.rollback()
             # creating and returning an unexpected error message
             error_message = f"An unexpected error occured:{str(e)}"
             return make_response({"error": error_message}, 500)
@@ -172,10 +195,11 @@ class Merchants(Resource):
 #  creating a MerchantsById Resource
 class MerchantsById(Resource):
     # a method to get a single merchant
-    def get(self, id):
+    @jwt_required()
+    def get(self):
         try:
             # querying and filtering the database using the id
-            merchant = Merchant.query.filter_by(id = id).first()
+            merchant = Merchant.query.filter_by(id = get_jwt_identity()).first()
 
             if merchant:
                 # making the merchant to a dictionary
@@ -198,36 +222,29 @@ class MerchantsById(Resource):
             return make_response({"error":error_message},500)
     
     #  a method to patch a merchant
-    def patch(self, id):
+    @jwt_required()
+    def patch(self):
         try:
             # querying and filtering the database using the id
-            merchant = Merchant.query.filter_by(id = id).first()
+            merchant = Merchant.query.filter_by(id = get_jwt_identity()).first()
             if merchant:
                 #  getting the data out of the users request
                 data = request.get_json()
                 # setting attributes based on the data gathered
-                for attr in data:
-                    if attr not in ["user_profile", "address"]:
-                        setattr(merchant, attr, data[attr])
-
-                # updating the user profile based on the users request
-                if "user_profile" in data:
-                    user_profile_data = data["user_profile"]
-                    # using the relationship to set attributes
-                    user_profile = merchant.profile
-                    if user_profile:
-                        for attr in user_profile_data:
-                            setattr(user_profile, attr, user_profile_data[attr])
-                    pass
+                
+                if "password" in data:
+                    setattr(merchant, "password",generate_password_hash(data["password"]) )
 
                 # updating the address based on the users request
                 if "address" in data:
                     address_data = data["address"]
                     # using the relationship to set attributes
-                    address = merchant.address
+                    address = Merchant.query.filter_by(id = merchant.address_id).first()
                     if address:
                         for attr in address_data:
-                            setattr(address, attr, address_data[attr])
+                            if address_data[attr] != "":
+                                setattr(address, attr, address_data[attr])
+
                 
                 # commiting the changes to the database
                 db.session.commit()
@@ -244,10 +261,12 @@ class MerchantsById(Resource):
                 return response
         except DatabaseError as e:
             # creating and returning a Database error message
+            db.session.rollback()
             error_message = f"Database error: {str(e)}"
             return make_response({"error": error_message}, 500)
         except Exception as e:
             # creating and returning an uexpected error message
+            db.session.rollback()
             error_message = f"An Unexpected error occured: {str(e)}"
             return make_response({"error": error_message}, 500)
         
@@ -273,10 +292,12 @@ class MerchantsById(Resource):
                 return response
         except DatabaseError as e:
             # creating and returning a Database error message
+            db.session.rollback()
             error_message = f"Database error: {str(e)}"
             return make_response({"error": error_message}, 500)
         except Exception as e:
             # creating and returning an unexpected error message
+            db.session.rollback()
             error_message = f"An unexpected error occured: {str(e)}"
             return make_response({"error": error_message}, 500)
     pass
@@ -285,4 +306,4 @@ class MerchantsById(Resource):
 
 api.add_resource(Home, "/", endpoint="home")
 api.add_resource(Merchants, "/merchants", endpoint="merchants")
-api.add_resource(MerchantsById, "/merchants/<string:id>", endpoint="merchants_by_id")
+api.add_resource(MerchantsById, "/merchant", endpoint="merchants_by_id")

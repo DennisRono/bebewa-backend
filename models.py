@@ -328,10 +328,15 @@ class Order(db.Model, SerializerMixin):
     # serialize rules
     serialize_rules = (
         "-merchant.orders",
+        "-merchant.profile.driver",
+        "-driver.profile.merchant",
         "-driver.deliveries",
+        "-driver.bid.driver",
+        "-driver.bid.order",
         "-recipient.deliveries",
-        "-review.order",
+        "-review",
         "-bid.order",
+        "-bid.driver",
     )
 
 

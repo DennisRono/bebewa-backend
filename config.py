@@ -23,3 +23,8 @@ class Config:
     MPESA_BUSINESS_SHORTCODE = os.getenv("MPESA_BUSINESS_SHORTCODE")
     MPESA_PASSKEY = os.getenv("MPESA_PASSKEY")
     MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL")
+
+    #cloudinary configurations
+    cloudinary_cloud_name=os.getenv("cloudinary_cloud_name")
+    cloudinary_api_key=os.getenv("cloudinary_api_key")
+    cloudinary_api_secret=os.getenv("cloudinary_api_secret")
