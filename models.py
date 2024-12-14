@@ -34,7 +34,7 @@ class User_profile(db.Model, SerializerMixin):
     driver = db.relationship("Driver", back_populates="profile")
     merchant = db.relationship("Merchant", back_populates="profile")
     # serialize rules
-    serialize_rules = ("-driver.profile", "-merchant.profile")
+    serialize_rules = ("-driver", "-merchant")
 
 
 class Admin_status_enum(Enum):
@@ -90,7 +90,7 @@ class Driver(db.Model, SerializerMixin):
     )
     mark_deleted = db.Column(db.Boolean, nullable=False, default=False)
     status = db.Column(db.Enum(Driver_status_enum), nullable=False, default="Active")
-    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"), unique=True)
     # relationships
     profile = db.relationship("User_profile", back_populates="driver")
     deliveries = db.relationship("Order", back_populates="driver")
@@ -135,7 +135,7 @@ class Merchant(db.Model, SerializerMixin):
     updated_at = db.Column(
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
-    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"))
+    user_profile_id = db.Column(db.String, db.ForeignKey("user_profiles.id"), unique=True,)
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"))
     # relationships
     profile = db.relationship("User_profile", back_populates="merchant")
@@ -327,16 +327,11 @@ class Order(db.Model, SerializerMixin):
 
     # serialize rules
     serialize_rules = (
-        "-merchant.orders",
-        "-merchant.profile.driver",
-        "-driver.profile.merchant",
-        "-driver.deliveries",
-        "-driver.bid.driver",
-        "-driver.bid.order",
+        "-merchant",
+        "-driver",
         "-recipient.deliveries",
-        "-review",
+        "-review.order",
         "-bid.order",
-        "-bid.driver",
     )
 
 
@@ -394,7 +389,7 @@ class Subscription_Payment(db.Model, SerializerMixin):
     driver = db.relationship("Driver", back_populates="subscription")
     transaction = db.relationship("Transactions", back_populates="subscription")
 
-    serialize_rules = ('-driver.subscription', '-transaction.subscription',)
+    serialize_rules = ('-driver', '-transaction.subscription',)
 
 class Transactions(db.Model, SerializerMixin):
     __tablename__ = "transactions"
@@ -442,4 +437,4 @@ class Bid(db.Model, SerializerMixin):
     driver = db.relationship("Driver", back_populates="bid")
     order = db.relationship("Order", back_populates="bid")
 
-    serialize_rules = ('-driver.bid', '-order.bid',)
+    serialize_rules = ('-driver', '-order',)

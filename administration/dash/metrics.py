@@ -1,7 +1,8 @@
-from flask import Blueprint, jsonify, make_response, request
+from flask import Blueprint, jsonify, make_response
 from flask_restful import Api, Resource
-from sqlalchemy import func
+from sqlalchemy import desc, func
 from datetime import datetime, timedelta
+from sqlalchemy.orm import aliased
 
 from models import (
     db,
@@ -14,6 +15,7 @@ from models import (
     Order_Status_Enum,
     Commodity,
     Vehicle,
+    User_profile,
 )
 
 metrics_bp = Blueprint("metrics", __name__)
@@ -23,6 +25,7 @@ api = Api(metrics_bp)
 class MetricsResource(Resource):
     def get(self):
         try:
+            # General metrics
             total_admins = Admin.query.filter_by(mark_deleted=False).count()
             total_drivers = Driver.query.filter_by(mark_deleted=False).count()
             total_merchants = Merchant.query.filter_by(mark_deleted=False).count()
@@ -48,6 +51,7 @@ class MetricsResource(Resource):
                 mark_deleted=False, status=Driver_status_enum.Suspended
             ).count()
 
+            # Orders
             total_orders = Order.query.filter_by(
                 status=Order_Status_Enum.Delivered
             ).count()
@@ -68,6 +72,7 @@ class MetricsResource(Resource):
 
             average_order_price = db.session.query(func.avg(Order.price)).scalar()
 
+            # Orders per driver
             orders_count_subquery = (
                 db.session.query(Driver.id, func.count(Order.id).label("order_count"))
                 .join(Order, Driver.id == Order.driver_id)
@@ -75,42 +80,61 @@ class MetricsResource(Resource):
                 .subquery()
             )
 
-            orders_per_driver = db.session.query(
-                func.avg(orders_count_subquery.c.order_count)
-            ).scalar()
-
-            most_active_merchant = (
-                db.session.query(Merchant.id, func.count(Order.id))
-                .join(Order)
-                .group_by(Merchant.id)
-                .order_by(func.count(Order.id).desc())
-                .first()
+            orders_per_driver = (
+                db.session.query(func.avg(orders_count_subquery.c.order_count)).scalar() or 0
             )
+
+            # Most active merchant
+            Profile = aliased(User_profile)
+            most_active_merchant = (db.session.query(
+                User_profile.full_name,
+                func.count(Order.id).label('order_count')
+            )
+            .join(Merchant, Merchant.id == Order.merchant_id)
+            .group_by(User_profile.full_name)
+            .order_by(desc('order_count'))
+            .limit(1)
+            .first())
+
             most_active_merchant = (
                 {
-                    "merchant_id": most_active_merchant[0],
-                    "order_count": most_active_merchant[1],
+                    "merchant_name": most_active_merchant.full_name if most_active_merchant else "No Merchant",
+                    "order_count": most_active_merchant.order_count if most_active_merchant else 0,
                 }
-                if most_active_merchant
-                else None
             )
 
+
+            # Total commodities delivered
             total_commodities_delivered = (
                 db.session.query(func.sum(Commodity.weight_kgs)).join(Order).scalar()
             )
 
+            # Active vehicles
             active_vehicles = Vehicle.query.filter_by(mark_deleted=False).count()
 
             revenue_by_merchant = [
-                {"merchant_id": merchant_id, "revenue": revenue}
-                for merchant_id, revenue in db.session.query(
-                    Merchant.id, func.sum(Order.price)
+                {
+                    "merchant_name": merchant_name,
+                    "revenue": revenue if revenue else 0,
+                    "merchant_id": merchant_id,
+                    "order_count": orders_count,
+                }
+                for merchant_name, merchant_id, orders_count, revenue in (
+                    db.session.query(
+                        User_profile.full_name.label("merchant_name"),
+                        Merchant.id.label("merchant_id"),
+                        func.count(Order.id).label("orders_count"),
+                        func.coalesce(func.sum(Order.price), 0).label("revenue")
+                    )
+                    .outerjoin(Merchant, Merchant.user_profile_id == User_profile.id)
+                    .outerjoin(Order, Order.merchant_id == Merchant.id)
+                    .group_by(User_profile.full_name, Merchant.id, Order.price)
+                    .all()
                 )
-                .join(Order)
-                .group_by(Merchant.id)
-                .all()
             ]
 
+
+            # Metrics data
             data = {
                 "total_admins": total_admins,
                 "total_drivers": total_drivers,
@@ -131,6 +155,7 @@ class MetricsResource(Resource):
                 "revenue_by_merchant": revenue_by_merchant,
             }
 
+            # User creation stats
             start_date = datetime.now() - timedelta(days=30)
             user_creation_stats = {
                 "admins": [
@@ -162,6 +187,7 @@ class MetricsResource(Resource):
                 ],
             }
 
+            # Order status distribution
             order_status_distribution = {
                 "Pending": orders_by_status["Pending_dispatch"],
                 "On Transit": orders_by_status["On_transit"],
@@ -169,6 +195,7 @@ class MetricsResource(Resource):
                 "Cancelled": orders_by_status["Cancelled"],
             }
 
+            # Revenue trends
             revenue_trends = [
                 {"date": str(row[0]), "revenue": row[1]}
                 for row in db.session.query(
@@ -179,6 +206,7 @@ class MetricsResource(Resource):
                 .all()
             ]
 
+            # Graph data
             graph_data = {
                 "user_creation_stats": user_creation_stats,
                 "order_status_distribution": order_status_distribution,

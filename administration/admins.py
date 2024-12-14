@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from sqlalchemy.exc import IntegrityError
-from models import Make, Models, Vehicle, db, Admin, Driver, Merchant, Admin_status_enum, Driver_status_enum
+from models import Bid, Make, Models, Order, Subscription_Payment, User_profile, Vehicle, db, Admin, Driver, Merchant, Admin_status_enum, Driver_status_enum
 import uuid
 from werkzeug.security import generate_password_hash
 import re
@@ -149,9 +149,10 @@ class AdminDetailResource(Resource):
 class DriverResource(Resource):
     def get(self):
         try:
-            drivers = Driver.query.filter_by(mark_deleted=False).all()
+            drivers = Driver.query.filter_by(mark_deleted=False).all()            
             return jsonify([driver.to_dict() for driver in drivers])
         except Exception as e:
+            print(e)
             return make_response({"message": str(e)}, 500)
 
     def post(self):
@@ -512,6 +513,14 @@ class VehicleResource(Resource):
             db.session.rollback()
             return make_response({"message": "An unexpected error occurred."}, 500)
 
+class AllProfiles(Resource):
+    def get(self):
+        try:
+            admins = User_profile.query.all()
+            return jsonify([admin.to_dict() for admin in admins])
+        except Exception as e:
+            return make_response({"message": str(e)}, 500)
+
 api.add_resource(AdminResource, "/", endpoint="admins")
 api.add_resource(AdminDetailResource, "/<string:admin_id>", endpoint="admin_detail")
 api.add_resource(DriverResource, "/driver", endpoint="drivers")
@@ -528,3 +537,4 @@ api.add_resource(MakeResource, "/make", endpoint="make")
 api.add_resource(MakeResource, "/make/<string:make_id>", endpoint="make_detail")
 api.add_resource(VehicleResource, "/vehicle", endpoint="vehicle")
 api.add_resource(VehicleResource, "/vehicle/<string:vehicle_id>", endpoint="vehicle_detail")
+api.add_resource(AllProfiles, "/profile", endpoint="profile")
