@@ -114,6 +114,12 @@ class Address(db.Model, SerializerMixin):
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
 
+    #  a one to one relationship between the merchant and the address
+    merchant = db.relationship("Merchant", back_populates="address")
+
+    # serialization rules
+    serialize_rules = ("-merchant.address", )
+
 
 class Merchant(db.Model, SerializerMixin):
     __tablename__ = "merchants"
@@ -134,8 +140,10 @@ class Merchant(db.Model, SerializerMixin):
     # relationships
     profile = db.relationship("User_profile", back_populates="merchant")
     orders = db.relationship("Order", back_populates="merchant")
+    #  a one to one relationship between the merchant and the address
+    address = db.relationship("Address",uselist = False, back_populates="merchant")
     # serialize rules
-    serialize_rules = ("-profile.merchant", "-password", "-orders.merchant")
+    serialize_rules = ("-profile.merchant", "-password", "-orders.merchant", "-address.merchant", )
 
 
 class Recipient(db.Model, SerializerMixin):
@@ -320,10 +328,15 @@ class Order(db.Model, SerializerMixin):
     # serialize rules
     serialize_rules = (
         "-merchant.orders",
+        "-merchant.profile.driver",
+        "-driver.profile.merchant",
         "-driver.deliveries",
+        "-driver.bid.driver",
+        "-driver.bid.order",
         "-recipient.deliveries",
-        "-review.order",
+        "-review",
         "-bid.order",
+        "-bid.driver",
     )
 
 
