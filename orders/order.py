@@ -8,9 +8,11 @@ from config import Config
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import json
+from flask_socketio import emit
 
 order_bp = Blueprint("order", __name__)
 api = Api(order_bp)
+
 
 cloudinary.config(
     cloud_name=Config.cloudinary_cloud_name,
@@ -20,6 +22,8 @@ cloudinary.config(
     
 # Creating an Orders Resource
 class Orders(Resource):
+    # from app import socketio
+
     # a get method to get all orders specific to a merchant
     @jwt_required()
     def get(self):
@@ -41,6 +45,7 @@ class Orders(Resource):
             return make_response({"error": error_message},500)
 
     #  a method to post an order
+    # @socketio.on('order_posted')
     @jwt_required()
     def post(self):
         try:
@@ -116,9 +121,13 @@ class Orders(Resource):
             )
             # adding and commiting the new_recepient to the database
             db.session.add(new_order)
-            db.session.commit()
+            db.session.flush()
 
+            #broadcast the newly created order
+            from app import socketio
+            socketio.emit("order_posted", new_order.to_dict())
             # Return the response with status 201 (Created)
+            db.session.commit()
             return make_response(new_order.to_dict(), 201)
 
         except DatabaseError as e:
