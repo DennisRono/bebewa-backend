@@ -3,6 +3,7 @@ from flask_restful import Api, Resource
 from flask_jwt_extended import jwt_required,get_jwt_identity,create_access_token,create_refresh_token
 from werkzeug.security import check_password_hash
 from models import Driver, Merchant,Admin
+from websockets_files.socketio_test import connected_users
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
 api = Api(auth)
@@ -50,6 +51,10 @@ class Driver_Login(Resource):
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(driver.password, password):
                 return make_response({"msg":"Wrong password"},400)
+            from app import socketio
+            if {"role":"Driver","user_id":driver.id} not in connected_users:
+                connected_users.append({"role":"Driver","user_id":driver.id})
+                socketio.emit("connect",connected_users)
             return make_response({
                 "access_token":create_access_token(identity=driver.id),
                 "refresh_token":create_refresh_token(identity=driver.id),
@@ -73,6 +78,10 @@ class Merchant_Login(Resource):
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(merchant.password, password):
                 return make_response({"msg":"Wrong password"},400)
+            from app import socketio
+            if {"role":"Merchant","user_id":merchant.id} not in connected_users:
+                connected_users.append({"role":"Driver","user_id":merchant.id})
+                socketio.emit("connect",connected_users)
             return make_response({
                 "access_token":create_access_token(identity=merchant.id),
                 "refresh_token":create_refresh_token(identity=merchant.id),

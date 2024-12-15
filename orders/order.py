@@ -8,7 +8,7 @@ from config import Config
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from datetime import datetime
 import json
-from flask_socketio import emit
+from flask_socketio import emit,join_room
 
 order_bp = Blueprint("order", __name__)
 api = Api(order_bp)
@@ -125,7 +125,8 @@ class Orders(Resource):
 
             #broadcast the newly created order
             from app import socketio
-            socketio.emit("order_posted", new_order.to_dict())
+            join_room(new_order.id)
+            socketio.emit("order_posted", new_order.to_dict(),to=new_order.id)
             # Return the response with status 201 (Created)
             db.session.commit()
             return make_response(new_order.to_dict(), 201)
@@ -164,6 +165,8 @@ class Order_By_Id(Resource):
         try:
             if "driver_id" in data and data.get("driver_id"):
                 setattr(order,"driver_id",data.get("driver_id"))
+                from app import socketio
+                socketio.emit("order_awarded", order.to_dict(),to=order.id)
             if "recipient_data" in data:
                 recipient_data=data.get("recipient_data")
                 recipient=Recipient.query.filter_by(id=order.recipient_id).first()

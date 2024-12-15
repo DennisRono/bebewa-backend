@@ -162,6 +162,9 @@ class Place_Get_All_Bid(Resource):
                 created_at=datetime.now()
             )
             db.session.add(new_bid)
+            db.session.flush()
+            from app import socketio
+            socketio.emit("bid_placed",new_bid.to_dict(),to=data.get("order_id"))
             db.session.commit()
             return make_response(new_bid.to_dict(),201)
         except Exception as e:
