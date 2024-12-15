@@ -5,6 +5,7 @@ from models import Bid, Make, Models, Order, Subscription_Payment, User_profile,
 import uuid
 from werkzeug.security import generate_password_hash
 import re
+from werkzeug.exceptions import BadRequest
 
 admin_bp = Blueprint("admin", __name__)
 api = Api(admin_bp)
@@ -33,19 +34,13 @@ admin_parser.add_argument(
 )
 
 driver_parser = reqparse.RequestParser()
-driver_parser.add_argument(
-    "phone_number", type=int, required=True, help="Phone number is required"
-)
-driver_parser.add_argument(
-    "password", type=str, required=True, help="Password is required"
-)
-driver_parser.add_argument(
-    "status",
-    type=str,
-    choices=[e.value for e in Driver_status_enum],
-    required=True,
-    help="Status is required",
-)
+driver_parser.add_argument("full_name", type=str, required=True, help="Full Name is required")
+driver_parser.add_argument("email", type=str, required=True, help="Email is required")
+driver_parser.add_argument("kra_pin", type=str, required=True, help="KRA PIN is required")
+driver_parser.add_argument("national_id", type=int, required=True, help="ID number is required")
+driver_parser.add_argument("phone_number", type=int, required=True, help="Phone number is required")
+driver_parser.add_argument("password", type=str, required=True, help="Password is required")
+driver_parser.add_argument("status", type=str, choices=[e.value for e in Driver_status_enum], required=True,  help="Status is required")
 
 model_parser = reqparse.RequestParser()
 model_parser.add_argument("name", type=str, required=True, help="Name is required")
@@ -119,7 +114,7 @@ class AdminDetailResource(Resource):
             if args["email"] and validate_email(args["email"]):
                 admin.email = args["email"]
             if args["password"]:
-                admin.password = args["password"]
+                admin.password = generate_password_hash(args["password"])
             if args["status"]:
                 admin.status = Admin_status_enum(args["status"])
 
@@ -156,26 +151,47 @@ class DriverResource(Resource):
             return make_response({"message": str(e)}, 500)
 
     def post(self):
-        args = driver_parser.parse_args()
-        phone_number = args["phone_number"]
-        password = args["password"]
-        status = args["status"]
-
-        if not validate_phone_number(phone_number):
-            return make_response({"message": "Invalid phone number"}, 400)
-
-        new_driver = Driver(
-            id=str(uuid.uuid4()),
-            phone_number=phone_number,
-            password=generate_password_hash(password),
-            mark_deleted=False,
-            status=Driver_status_enum(status),
-        )
-
         try:
+            args = driver_parser.parse_args()
+            full_name = args["full_name"]
+            email = args["email"]
+            kra_pin = args["kra_pin"]
+            national_id = args["national_id"]
+            phone_number = args["phone_number"]
+            password = args["password"]
+            status = args["status"]
+
+            if not validate_phone_number(phone_number):
+                return make_response({"message": "Invalid phone number"}, 400)
+            
+            new_profile = User_profile(
+                id=str(uuid.uuid4()),
+                full_name=full_name,
+                phone_number=phone_number,
+                email=email,
+                kra_pin=kra_pin,
+                national_id=national_id,
+                mark_deleted=False,
+            )
+
+            new_driver = Driver(
+                id=str(uuid.uuid4()),
+                phone_number=phone_number,
+                password=generate_password_hash(password),
+                mark_deleted=False,
+                status=Driver_status_enum(status),
+                user_profile_id=new_profile.id
+            )
+
+            db.session.add(new_profile)
             db.session.add(new_driver)
             db.session.commit()
             return make_response(new_driver.to_dict(), 201)
+        except BadRequest as e:
+            return jsonify({
+                "message": str(e),
+                "status": "fail"
+            }), 400
         except IntegrityError:
             db.session.rollback()
             return make_response({"message": "Phone number already exists"}, 409)
@@ -188,14 +204,27 @@ class DriverResource(Resource):
             driver = Driver.query.filter_by(id=driver_id, mark_deleted=False).first()
             if not driver:
                 return make_response({"message": "Driver not found"}, 404)
+            # update user profile table too
+            profile = User_profile.query.filter_by(id=driver.user_profile_id, mark_deleted=False).first()
+            if not profile:
+                return make_response({"message": "Failed to update Profile as Profile was not found"}, 404)
 
             args = driver_parser.parse_args()
             if args["phone_number"] and validate_phone_number(args["phone_number"]):
                 driver.phone_number = args["phone_number"]
+                profile.phone_number = args["phone_number"]
             if args["password"]:
                 driver.password = args["password"]
             if args["status"]:
                 driver.status = Driver_status_enum(args["status"])
+            if args["full_name"]:
+                profile.full_name = args["full_name"]
+            if args["email"]:
+                profile.email = args["email"]
+            if args["kra_pin"]:
+                profile.kra_pin = args["kra_pin"]
+            if args["national_id"]:
+                profile.national_id = args["national_id"]
 
             db.session.commit()
             return make_response(driver.to_dict(), 200)
