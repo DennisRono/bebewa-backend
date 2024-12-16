@@ -96,8 +96,9 @@ class Driver(db.Model, SerializerMixin):
     deliveries = db.relationship("Order", back_populates="driver")
     subscription = db.relationship("Subscription_Payment", back_populates="driver")
     bid = db.relationship("Bid", back_populates="driver")
+    vehicles = db.relationship("Vehicle", back_populates="driver")
     # serialize rules
-    serialize_rules = ("-profile.driver", "-password", "-deliveries.driver", "-subscription.driver", '-bid.driver',)
+    serialize_rules = ("-profile.driver", "-password", "-deliveries.driver", "-subscription.driver", '-bid.driver', '-vehicles.driver',)
 
 
 class Address(db.Model, SerializerMixin):
@@ -177,6 +178,12 @@ class Models(db.Model, SerializerMixin):
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
 
+    # relationships
+    makes = db.relationship("Make", back_populates="model")
+
+    # serialize rules
+    serialize_rules = ("-makes.model",)
+
 
 class Make(db.Model, SerializerMixin):
     __tablename__ = "makes"
@@ -190,6 +197,13 @@ class Make(db.Model, SerializerMixin):
         DateTime, nullable=False, default=func.now(), onupdate=func.now()
     )
     model_id = db.Column(db.String, db.ForeignKey("models.id"))
+
+    # relationships
+    model = db.relationship("Models", back_populates="makes")
+    vehicles = db.relationship("Vehicle", back_populates="make")
+
+    # serialize rules
+    serialize_rules = ("-model.makes", "-vehicles.make",)
 
 
 class Vehicle(db.Model, SerializerMixin):
@@ -216,8 +230,10 @@ class Vehicle(db.Model, SerializerMixin):
 
     # relationships
     images = db.relationship("Vehicle_Image", back_populates="vehicle")
+    make = db.relationship("Make", back_populates="vehicles")
+    driver = db.relationship("Driver", back_populates="vehicles")
     # serialize rules
-    serialize_rules = ("-images.vehicle",)
+    serialize_rules = ("-images.vehicle", "-make.vehicles", '-driver.vehicles', '-driver.deliveries', '-driver.subscription')
 
 
 class Vehicle_Image(db.Model, SerializerMixin):

@@ -4,7 +4,6 @@ from datetime import timedelta
 
 load_dotenv()
 
-
 class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("POSTGRES_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
