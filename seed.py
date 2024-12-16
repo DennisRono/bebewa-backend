@@ -13,45 +13,6 @@ logger = logging.getLogger(__name__)
 
 fake = Faker()
 
-
-def empty_tables(app, db):
-    try:
-        with app.app_context():
-            from models import (
-                Admin,
-                Driver,
-                Merchant,
-                Recipient,
-                Order,
-                Address,
-                Models,
-                Make,
-                Vehicle,
-                Vehicle_Image,
-                Commodity,
-                Commodity_Image,
-                Review,
-            )
-
-            db.session.query(Admin).delete()
-            db.session.query(Driver).delete()
-            db.session.query(Merchant).delete()
-            db.session.query(Recipient).delete()
-            db.session.query(Order).delete()
-            db.session.query(Address).delete()
-            db.session.query(Models).delete()
-            db.session.query(Make).delete()
-            db.session.query(Vehicle).delete()
-            db.session.query(Vehicle_Image).delete()
-            db.session.query(Commodity).delete()
-            db.session.query(Commodity_Image).delete()
-            db.session.query(Review).delete()
-            db.session.commit()
-        logger.info("Tables emptied successfully.")
-    except Exception as e:
-        logger.error(f"Error while emptying tables: {e}")
-
-
 def seed_admins(app, db):
     admins = []
     try:
@@ -75,29 +36,26 @@ def seed_admins(app, db):
 
 
 def seed_drivers(app, db):
-    drivers = []
-    try:
         with app.app_context():
             from models import Driver, Driver_status_enum, User_profile
 
             profiles = User_profile.query.all()
 
             for _ in range(10):
-                profile = rc(profiles)
-                driver = Driver(
-                    phone_number=fake.random_number(digits=9),
-                    password=generate_password_hash(fake.password()),
-                    mark_deleted=fake.boolean(),
-                    status=random.choice([status for status in Driver_status_enum]),
-                    user_profile_id=profile.id,
-                )
-                db.session.add(driver)
-                drivers.append(driver)
-            db.session.commit()
+                try:
+                    profile = rc(profiles)
+                    driver = Driver(
+                        phone_number=fake.random_number(digits=9),
+                        password=generate_password_hash(fake.password()),
+                        mark_deleted=fake.boolean(),
+                        status=random.choice([status for status in Driver_status_enum]),
+                        user_profile_id=profile.id,
+                    )
+                    db.session.add(driver)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Driver table: {e}")
         logger.info("Driver table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Driver table: {e}")
-    return drivers
 
 
 def seed_addresses(app, db):
@@ -119,26 +77,28 @@ def seed_addresses(app, db):
 
 
 def seed_merchants(app, db):
-    try:
         with app.app_context():
-            from models import Merchant, Driver_status_enum, Address
+            from models import Merchant, Driver_status_enum, Address, User_profile
 
             addresses = Address.query.all()
+            profiles = User_profile.query.all()
 
             for _ in range(10):
-                address = rc(addresses)
-                merchant = Merchant(
-                    phone_number=fake.random_number(digits=9),
-                    password=generate_password_hash(fake.password()),
-                    mark_deleted=fake.boolean(),
-                    status=rc([status for status in Driver_status_enum]),
-                    address_id=address.id,
-                )
-                db.session.add(merchant)
-            db.session.commit()
+                try:
+                    merchant = Merchant(
+                        phone_number=fake.random_number(digits=9),
+                        password=generate_password_hash(fake.password()),
+                        mark_deleted=fake.boolean(),
+                        status=rc([status for status in Driver_status_enum]),
+                        user_profile_id=rc(profiles).id,
+                        address_id=rc(addresses).id,
+                    )
+                    db.session.add(merchant)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Merchant table: {e}")
         logger.info("Merchant table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Merchant table: {e}")
+
 
 
 def seed_recipients(app, db):
@@ -205,28 +165,24 @@ def seed_commodities(app, db):
     return commodities
 
 def seed_commodity_images(app, db):
-    commodities = []
-    try:
         with app.app_context():
             from models import Commodity,Commodity_Image
             commodities = Commodity.query.all()
 
             for _ in range(10):
-                commodity = Commodity_Image(
-                    image_url=fake.image_url(),
-                    commodity_id=rc(commodities).id
-                )
-                db.session.add(commodity)
-                commodities.append(commodity)
-            db.session.commit()
+                try:
+                    commodity = Commodity_Image(
+                        image_url=fake.image_url(),
+                        commodity_id=rc(commodities).id
+                    )
+                    db.session.add(commodity)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Commodity Images table: {e}")
         logger.info("Commodity Images table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Commodity Images table: {e}")
-    return commodities
 
 
 def seed_orders(app, db):
-    try:
         with app.app_context():
             from models import (
                 Order,
@@ -235,53 +191,56 @@ def seed_orders(app, db):
                 Recipient,
                 Commodity,
                 Address,
+                Driver
             )
 
             merchants = Merchant.query.all()
             recipients = Recipient.query.all()
             commodities = Commodity.query.all()
             addresses = Address.query.all()
+            drivers = Driver.query.all()
 
             for _ in range(10):
-                order = Order(
-                    status=rc([status for status in Order_Status_Enum]),
-                    commodity_id=rc(commodities).id,
-                    dispatch_time=fake.date_this_year(),
-                    arrival_time=fake.date_this_year(),
-                    created_at=fake.date_this_year(),
-                    price=fake.random_int(min=10, max=1000),
-                    merchant_id=rc(merchants).id,
-                    address_id=rc(addresses).id,
-                    recipient_id=rc(recipients).id,
-                )
-                db.session.add(order)
-            db.session.commit()
+                try:
+                    order = Order(
+                        status=rc([status for status in Order_Status_Enum]),
+                        commodity_id=rc(commodities).id,
+                        dispatch_time=fake.date_this_year(),
+                        arrival_time=fake.date_this_year(),
+                        created_at=fake.date_this_year(),
+                        price=fake.random_int(min=10, max=1000),
+                        merchant_id=rc(merchants).id,
+                        driver_id=rc(drivers).id,
+                        address_id=rc(addresses).id,
+                        recipient_id=rc(recipients).id,
+                    )
+                    db.session.add(order)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Order table: {e}")
         logger.info("Order table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Order table: {e}")
 
 
 def seed_reviews(app, db):
-    try:
         with app.app_context():
             from models import Review, Order
 
             orders = Order.query.all()
 
             for _ in range(10):
-                review = Review(
-                    rating=fake.random_int(min=0, max=5),
-                    comment=fake.text(max_nb_chars=20),
-                    order_id=rc(orders).id,
-                )
-                db.session.add(review)
-            db.session.commit()
+                try:
+                    review = Review(
+                        rating=fake.random_int(min=0, max=5),
+                        comment=fake.text(max_nb_chars=20),
+                        order_id=rc(orders).id,
+                    )
+                    db.session.add(review)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Review table: {e}")
         logger.info("Review table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Review table: {e}")
 
 def seed_subscription_payment(app, db):
-    try:
         with app.app_context():
             from models import Subscription_Payment, Subscription_status_enum, Driver, Transactions
 
@@ -289,18 +248,19 @@ def seed_subscription_payment(app, db):
             transactions = Transactions.query.all()
 
             for _ in range(10):
-                subscription_payment = Subscription_Payment(
-                    price=fake.random_int(min=0, max=2000),
-                    recurring_payment_date = fake.date_between_dates(date_start=datetime.now(), date_end=datetime(datetime.now().year + 1, 12, 31)),
-                    status=random.choice([status for status in Subscription_status_enum]),
-                    driver_id=rc(drivers).id,
-                    transaction_id=rc(transactions).id
-                )
-                db.session.add(subscription_payment)
-            db.session.commit()
+                try:
+                    subscription_payment = Subscription_Payment(
+                        price=fake.random_int(min=0, max=2000),
+                        recurring_payment_date = fake.date_between_dates(date_start=datetime.now(), date_end=datetime(datetime.now().year + 1, 12, 31)),
+                        status=random.choice([status for status in Subscription_status_enum]),
+                        driver_id=rc(drivers).id,
+                        transaction_id=rc(transactions).id
+                    )
+                    db.session.add(subscription_payment)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Subscription Payment table: {e}")
         logger.info("Subscription Payment table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Subscription Payment table: {e}")
 
 def seed_transactions(app, db):
     try:
@@ -323,24 +283,24 @@ def seed_transactions(app, db):
         logger.error(f"Error while seeding Transactions table: {e}")
 
 def seed_bids(app, db):
-    try:
         with app.app_context():
             from models import Bid, Driver, Order
 
             drivers = Driver.query.all()
             orders = Order.query.all()
             for _ in range(10):
-                bid = Bid(
-                    status=random.choice(['Successful', 'Rejected']),
-                    price=fake.random_int(min=0, max=2000),
-                    driver_id=rc(drivers).id,
-                    order_id=rc(orders).id
-                )
-                db.session.add(bid)
-            db.session.commit()
+                try:
+                    bid = Bid(
+                        status=random.choice(['Successful', 'Rejected']),
+                        price=fake.random_int(min=0, max=2000),
+                        driver_id=rc(drivers).id,
+                        order_id=rc(orders).id
+                    )
+                    db.session.add(bid)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Bid table: {e}")
         logger.info("Bid table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Bid table: {e}")
 
 def seed_models(app, db):
     try:
@@ -358,24 +318,23 @@ def seed_models(app, db):
         logger.error(f"Error while seeding Models table: {e}")
 
 def seed_makes(app, db):
-    try:
         with app.app_context():
             from models import Make, Models
             models = Models.query.all()
 
             for _ in range(10):
-                order = Make(
-                    name= fake.name(),
-                    model_id=rc(models).id
-                )
-                db.session.add(order)
-            db.session.commit()
+                try:
+                    order = Make(
+                        name= fake.name(),
+                        model_id=rc(models).id
+                    )
+                    db.session.add(order)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Make table: {e}")
         logger.info("Make table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Make table: {e}")
 
 def seed_vehicles(app, db):
-    try:
         with app.app_context():
             from models import Make, Models, Vehicle, Driver
             models = Models.query.all()
@@ -383,37 +342,38 @@ def seed_vehicles(app, db):
             drivers = Driver.query.all()
 
             for _ in range(10):
-                order = Vehicle(
-                    number_plate=fake.license_plate(),
-                    make_name=rc(makes).id,
-                    model_name=rc(models).id,
-                    color=fake.color_name(),
-                    driver_id=rc(drivers).id,
-                    tonnage=random.uniform(1.0, 10.0),
-                    mark_deleted=fake.boolean()
-                )
-                db.session.add(order)
-            db.session.commit()
+                try:
+                    order = Vehicle(
+                        number_plate=fake.license_plate(),
+                        make_name=rc(makes).id,
+                        model_name=rc(models).id,
+                        color=fake.color_name(),
+                        driver_id=rc(drivers).id,
+                        tonnage=random.uniform(1.0, 10.0),
+                        mark_deleted=fake.boolean()
+                    )
+                    db.session.add(order)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Vehicles table: {e}")
         logger.info("Vehicles table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Vehicles table: {e}")
 
 def seed_vehicle_images(app, db):
-    try:
         with app.app_context():
             from models import Vehicle, Vehicle_Image
             vehicles = Vehicle.query.all()
 
             for _ in range(10):
-                order = Vehicle_Image(
-                    image_url=fake.image_url(),
-                    vehicle_id=rc(vehicles).id
-                )
-                db.session.add(order)
-            db.session.commit()
+                try:
+                    order = Vehicle_Image(
+                        image_url=fake.image_url(),
+                        vehicle_id=rc(vehicles).id
+                    )
+                    db.session.add(order)
+                    db.session.commit()
+                except Exception as e:
+                    logger.error(f"Error while seeding Vehicles Images table: {e}")
         logger.info("Vehicles Images table seeded successfully.")
-    except Exception as e:
-        logger.error(f"Error while seeding Vehicles Images table: {e}")
 
 def seed_data():
     try:
@@ -423,7 +383,6 @@ def seed_data():
             from models import db
             db.drop_all()
             db.create_all()
-            #empty_tables(app, db)
             seed_admins(app, db)
             seed_user_profile(app, db)
             seed_drivers(app, db)

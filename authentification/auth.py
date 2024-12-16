@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource
 from flask_jwt_extended import jwt_required,get_jwt_identity,create_access_token,create_refresh_token
 from werkzeug.security import check_password_hash
-from models import Driver, Merchant
+from models import Driver, Merchant,Admin
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
 api = Api(auth)
@@ -29,7 +29,7 @@ class New_Access_Token(Resource):
             user_id=get_jwt_identity()
             if not user_id:
                 return make_response({"msg":"Invalid request"},400)
-            access_token=create_access_token(id=user_id)
+            access_token=create_access_token(identity=user_id)
             return make_response({"access_token":access_token},200)
         except Exception as e:
             print(e)
@@ -46,7 +46,7 @@ class Driver_Login(Resource):
         password=data.get("password")
         try:
             driver=Driver.query.filter_by(phone_number=phone_number).first()
-            if not driver:
+            if not driver or driver.mark_deleted==True:
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(driver.password, password):
                 return make_response({"msg":"Wrong password"},400)
@@ -55,6 +55,7 @@ class Driver_Login(Resource):
                 "refresh_token":create_refresh_token(identity=driver.id),
             },201)
         except Exception as e:
+            print(e)
             return make_response({"msg":"Internal server error"},500)
 api.add_resource(Driver_Login,"/driver-login", endpoint="driver-login")
 
@@ -68,7 +69,7 @@ class Merchant_Login(Resource):
         password=data.get("password")
         try:
             merchant=Merchant.query.filter_by(phone_number=phone_number).first()
-            if not merchant:
+            if not merchant or merchant.mark_deleted==True:
                 return make_response({"msg":f"{phone_number} not registered"},400)
             if not check_password_hash(merchant.password, password):
                 return make_response({"msg":"Wrong password"},400)
@@ -89,8 +90,8 @@ class Admin_Login(Resource):
         email=data.get("email")
         password=data.get("password")
         try:
-            admin=admin.query.filter_by(email=email).first()
-            if not admin:
+            admin=Admin.query.filter_by(email=email).first()
+            if not admin or admin.mark_deleted==True:
                 return make_response({"msg":f"{email} not registered"},400)
             if not check_password_hash(admin.password, password):
                 return make_response({"msg":"Wrong password"},400)
@@ -99,6 +100,7 @@ class Admin_Login(Resource):
                 "refresh_token":create_refresh_token(identity=admin.id),
             },201)
         except Exception as e:
+            print(e)
             return make_response({"msg":"Internal server error"},500)
 api.add_resource(Admin_Login,"/admin-login", endpoint="admin-login")
 

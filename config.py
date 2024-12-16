@@ -4,7 +4,6 @@ from datetime import timedelta
 
 load_dotenv()
 
-
 class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv("POSTGRES_URI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -18,6 +17,7 @@ class Config:
     JWT_ACCESS_REFRESH_EXPIRES = timedelta(days=30)
     SECRET_KEY = os.getenv("SECRET_KEY", "46ergsgwet5w5fewfweffhdgh")
 
+    # MPESA Configurations
     MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY")
     MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET")
     MPESA_BUSINESS_SHORTCODE = os.getenv("MPESA_BUSINESS_SHORTCODE")
@@ -28,3 +28,4 @@ class Config:
     cloudinary_cloud_name=os.getenv("cloudinary_cloud_name")
     cloudinary_api_key=os.getenv("cloudinary_api_key")
     cloudinary_api_secret=os.getenv("cloudinary_api_secret")
+

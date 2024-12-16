@@ -17,13 +17,14 @@ from flask_jwt_extended import JWTManager
 
 app = Flask(__name__)
 CORS(app)
+JWTManager(app=app)
 app.config.from_object(Config)
 
 
 app.register_blueprint(auth)
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(metrics_bp, url_prefix="/admin/dash")
-app.register_blueprint(driver_bp)
+app.register_blueprint(driver_bp, url_prefix='/driver')
 app.register_blueprint(merchant_bp)
 app.register_blueprint(order_bp)
 app.register_blueprint(review_bp, url_prefix="/reviews")
