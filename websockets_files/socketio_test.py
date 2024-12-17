@@ -1,4 +1,5 @@
 import socketio
+import os
 
 # Initialize Socket.IO client
 sio = socketio.Client()
@@ -39,7 +40,7 @@ def on_bid_awarded(data):
 
 try:
     # Connect to the server
-    sio.connect('http://127.0.0.1:5555')
+    sio.connect(os.getenv("BACKEND_URL"))
     sio.wait()
 except Exception as e:
     print(e)
