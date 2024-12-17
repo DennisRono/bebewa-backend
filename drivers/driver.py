@@ -27,10 +27,10 @@ class Get_Driver_Data(Resource):
         try:
             driver=Driver.query.filter_by(id=get_jwt_identity()).first()
             if not driver or driver.mark_deleted==True:
-                return make_response({"msg":"Driver not found"},400)
+                return make_response({"message":"Driver not found"},400)
             return make_response(driver.to_dict(),200)
         except Exception as e:
-            return make_response({"msg":"Internal server error"},500)
+            return make_response({"message":"Internal server error"},500)
 api.add_resource(Get_Driver_Data,'/driver-data',endpoint="driver-data")
 
 #resource that enables the driver to register their vehicle
@@ -42,19 +42,19 @@ class Register_Vehicle(Resource):
         images=request.files.getlist("images") #points to an array of images
         vehicle_data=request.form.get("vehicle_data") #points to a dict "vehicle_data" that contains json data about the vehicle
         if not vehicle_data:
-            return make_response({"msg":"Vehicle data is missing"},400)
+            return make_response({"message":"Vehicle data is missing"},400)
         if not images or len(images)==0:
-            return make_response({"msg":"Upload atleast one image"},400)
+            return make_response({"message":"Upload atleast one image"},400)
         data=json.loads(vehicle_data) #parse form data into json format
         if not all(attr in data for attr in [
             "number_plate","model_name","make_name","tonnage","color"
         ]):
-            return make_response({"msg":"Required data is missing"},400)
+            return make_response({"message":"Required data is missing"},400)
         number_plate=data.get("number_plate")
         try:
             vehicle=Vehicle.query.filter_by(number_plate=number_plate).first()
             if vehicle and vehicle.mark_deleted==False:
-                return make_response({"msg":"Vehicle already exists"},400)
+                return make_response({"message":"Vehicle already exists"},400)
             #post images associated with a vehicle
             images_url=[] #initialize an empty array to store the generated urls
             for file in images:
@@ -86,7 +86,7 @@ class Register_Vehicle(Resource):
         except Exception as e:
             db.session.rollback()
             print(e)
-            return make_response({"msg":"Internal server error"},500)
+            return make_response({"message":"Internal server error"},500)
 api.add_resource(Register_Vehicle,'/add-vehicle', endpoint="add-vehicle")
 
 #Update,Get,Delete vehicle details
@@ -96,10 +96,10 @@ class Vehicle_By_Number_Plate(Resource):
             vehicle=Vehicle.query.filter_by(number_plate=plate).first()
             if vehicle and vehicle.mark_deleted==False:
                 return make_response(vehicle.to_dict(),200)
-            return make_response({"msg":"Vehicle doesnt exist"},400)
+            return make_response({"message":"Vehicle doesnt exist"},400)
         except Exception as e:
             print(e)
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
         
     @jwt_required()
     def patch(self,plate):
@@ -110,7 +110,7 @@ class Vehicle_By_Number_Plate(Resource):
         try:
             vehicle=Vehicle.query.filter_by(number_plate=plate).first()
             if not vehicle or vehicle.mark_deleted==True:
-                return make_response({"msg":f"Vehicle plate number{plate} is not registered"},400)
+                return make_response({"message":f"Vehicle plate number{plate} is not registered"},400)
             if vehicle_data:
                 data=json.loads(vehicle_data)
                 if "mark_deleted" not in data:
@@ -135,7 +135,7 @@ class Vehicle_By_Number_Plate(Resource):
         except Exception as e:
             db.session.rollback()
             print(e)
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
 api.add_resource(Vehicle_By_Number_Plate,"/vehicle/<string:plate>")
 
 #resource that allows a driver to bid their price for an order
@@ -147,12 +147,12 @@ class Place_Get_All_Bid(Resource):
             return make_response([bid.to_dict() for bid in my_bids],200)
         except Exception as e:
             print(e)
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
     @jwt_required()
     def post(self):
         data=request.get_json()
         if not all(attr in data for attr in ["order_id","price"]):
-            return make_response({"msg":"Required data is missing"},400)
+            return make_response({"message":"Required data is missing"},400)
         try:
             new_bid=Bid(
                 status="Pending",
@@ -170,7 +170,7 @@ class Place_Get_All_Bid(Resource):
         except Exception as e:
             db.session.rollback()
             print(e)
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
 api.add_resource(Place_Get_All_Bid,"/bids")
 
 #resource that updates bid price details by a driver,deletes a bid
@@ -181,24 +181,24 @@ class Bid_By_Id(Resource):
         try:
             bid=Bid.query.filter_by(id=id,driver_id=get_jwt_identity()).first()
             if not bid:
-                return make_response({"msg":"Bid doesnt exist"},400)
+                return make_response({"message":"Bid doesnt exist"},400)
             if "price" in data:
                 setattr(bid,"price",data.get("price"))
                 db.session.commit()
             return make_response(bid.to_dict(),200)
         except Exception as e:
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
     
     @jwt_required()
     def delete(self,id):
         try:
             bid=Bid.query.filter_by(id=id,driver_id=get_jwt_identity()).first()
             if not bid:
-                return make_response({"msg":"Bid not found"},400)
+                return make_response({"message":"Bid not found"},400)
             db.session.delete(bid)
             db.session.commit()
-            return make_response({"msg":"Deleted successfully"},204)
+            return make_response({"message":"Deleted successfully"},204)
         except Exception:
             db.session.rollback()
-            return make_response({"msg":"Delete failed. Server error"},500)
+            return make_response({"message":"Delete failed. Server error"},500)
 api.add_resource(Bid_By_Id,'/bid/<string:id>')

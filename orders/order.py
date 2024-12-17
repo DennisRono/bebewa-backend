@@ -52,23 +52,23 @@ class Orders(Resource):
             order_data = request.form.get("order_data") #get non-file data under the key order_data
             images = request.files.getlist("images") #get files data under the key images
             if not order_data:
-                return make_response({"msg":"Order data is required"},400)
+                return make_response({"message":"Order data is required"},400)
             data=json.loads(order_data) #convert non-file data into accepatble json format
             # data is a dict which includes keys to other dicts: commodity_data, recipient_data
             #ascertain that the keys pointing to this dicts are present
             if not all(attr in data for attr in ["commodity_data","recipient_data"]):
-                return make_response({"msg":"Required commodity and recipient data is missing"},400)
+                return make_response({"message":"Required commodity and recipient data is missing"},400)
             commodity_data=data.get("commodity_data")
             recipient_data=data.get("recipient_data")
             #validate commodity data
             if not all(attr in commodity_data for attr in ["name","weight_kgs"]):
-                return make_response({"msg":"Name and commodity weight required"},400)
+                return make_response({"message":"Name and commodity weight required"},400)
             # validate recipients data
             if not all(attr in recipient_data for attr in ["full_name","phone_number"]):
-                return make_response({"msg":"Recipient name and phone number are required"},400)
+                return make_response({"message":"Recipient name and phone number are required"},400)
             phone_number=recipient_data.get("phone_number")
             if not str(phone_number).isdigit() or len(str(phone_number))!=9:
-                return make_response({"msg":"Invalid phone number format"},400)
+                return make_response({"message":"Invalid phone number format"},400)
             #  creating a commodity based on the users request
             new_commodity = Commodity(
                 name = commodity_data.get("name"),
@@ -152,15 +152,15 @@ class Order_By_Id(Resource):
         try:
             order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
             if not order:
-                return make_response({"msg":"Order does not exist"},400)
+                return make_response({"message":"Order does not exist"},400)
             return make_response(order.to_dict(),200)
         except Exception:
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
     @jwt_required()
     def patch(self,id):
         order=Order.query.filter_by(id=id,merchant_id=get_jwt_identity()).first()
         if not order:
-            return make_response({"msg":"Order does not exist"},400)
+            return make_response({"message":"Order does not exist"},400)
         data=request.get_json()
         try:
             if "driver_id" in data and data.get("driver_id"):
@@ -179,7 +179,7 @@ class Order_By_Id(Resource):
             return make_response(order.to_dict(),200)
         except Exception as e:
             db.session.rollback()
-            return make_response({"msg":"Error updating order details"},500)
+            return make_response({"message":"Error updating order details"},500)
 
     @jwt_required()
     def delete(self,id):
@@ -188,8 +188,8 @@ class Order_By_Id(Resource):
             if order and order.status=="Pending Dispatch":
                 db.session.delete(order)
                 db.session.commit()
-                return make_response({"msg":"Order deleted successfully"},204)
-            return make_response({"msg":"Delete failed"},400)
+                return make_response({"message":"Order deleted successfully"},204)
+            return make_response({"message":"Delete failed"},400)
         except Exception as e:
-            return make_response({"msg":"Server error"},500)
+            return make_response({"message":"Server error"},500)
 api.add_resource(Order_By_Id,'/order/<string:id>')
