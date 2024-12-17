@@ -1,11 +1,17 @@
 from flask import Blueprint, jsonify, make_response, request
 from flask_restful import Api, Resource, reqparse
 from sqlalchemy.exc import IntegrityError
-from models import Bid, Make, Models, Order, Subscription_Payment, User_profile, Vehicle, db, Admin, Driver, Merchant, Admin_status_enum, Driver_status_enum
+from models import Bid, Make, Models, Order, Subscription_Payment, User_profile, Vehicle, db, Admin, Driver, Merchant, Admin_status_enum, Driver_status_enum, Commodity, Order_Status_Enum, Recipient, Commodity_Image
 import uuid
 from werkzeug.security import generate_password_hash
 import re
 from werkzeug.exceptions import BadRequest
+from sqlalchemy.exc import DatabaseError
+from flask_jwt_extended import jwt_required, get_jwt_identity
+import cloudinary
+import cloudinary.uploader
+from datetime import datetime
+import json
 
 admin_bp = Blueprint("admin", __name__)
 api = Api(admin_bp)
@@ -549,6 +555,166 @@ class AllProfiles(Resource):
             return jsonify([admin.to_dict() for admin in admins])
         except Exception as e:
             return make_response({"message": str(e)}, 500)
+
+
+# Getting all orders for the diaplay of the admin
+class Order_List(Resource):
+    # a get method to get all orders
+    def get(self):
+        try:
+            # querying the database to get all the orders
+            orders = Order.query.all()
+            # looping through the orders in order to get the merchants, commodities and driver
+            for order in orders:
+                merchant = Merchant.query.filter_by(id = order.merchant_id).first()
+                if merchant:
+                    order.merchant_full_name = merchant.profile.full_name
+                    order.merchant_address_street = merchant.address.street
+                    order.merchant_address_town = merchant.address.town
+                
+                commodity = Commodity.query.filter_by(id = order.commodity_id).first()
+                if commodity:
+                    order.commodity_name = commodity.name
+                    order.commodity_dimensions = commodity.weight_kgs
+                    order.commodity_image= [image.to_dict() for image in commodity.images]
+
+                driver = Driver.query.filter_by(id = order.driver_id).first()
+                if driver:
+                    order.driver_full_name = driver.profile.full_name
+
+            # Looping through the orders to get one order to a dictionary that will be jsonified later
+            order_dict = [
+                {
+                    "id": order.id,
+                    "status":order.status.value,
+                    "price": order.price,
+                    "merchant_full_name": order.merchant_full_name,  
+                    "merchant_address_street": order.merchant_address_street, 
+                    "merchant_address_town": order.merchant_address_town, 
+                    "commodity_name": order.commodity_name,
+                    "commodity_dimensions":order.commodity_dimensions,
+                    "commodity_image": order.commodity_image,
+                    "dispatch_time": order.dispatch_time,
+                    "arrival_time": order.arrival_time,
+                    "recipient": {
+                        "full_name": order.recipient.full_name,
+                        "email": order.recipient.email,
+                        "phone_number": order.recipient.phone_number
+                    },
+                    "driver_name":order.driver_full_name
+                }
+                for order in orders
+            ]
+
+
+            #  creating and returning a response 
+            response = make_response(jsonify(order_dict), 200)
+            return response
+        except DatabaseError as e:
+            #  creating and returning an error message 
+            error_message = f"Database error: {str(e)}"
+            return make_response({"message":error_message},500)
+        except Exception as e:
+            # creating and returning an unexpected error message
+            error_message= f"An uexpected error occured:{str(e)}"
+            return make_response({"message": error_message},500)
+    
+    #  a method to post an order
+    @jwt_required()
+    def post(self):
+        try:
+            order_data = request.form.get("order_data") #get non-file data under the key order_data
+            images = request.files.getlist("images") #get files data under the key images
+            if not order_data:
+                return make_response({"message":"Order data is required"},400)
+            data=json.loads(order_data) #convert non-file data into accepatble json format
+            # data is a dict which includes keys to other dicts: commodity_data, recipient_data
+            #ascertain that the keys pointing to this dicts are present
+            if not all(attr in data for attr in ["commodity_data","recipient_data"]):
+                return make_response({"message":"Required commodity and recipient data is missing"},400)
+            commodity_data=data.get("commodity_data")
+            recipient_data=data.get("recipient_data")
+            #validate commodity data
+            if not all(attr in commodity_data for attr in ["name","weight_kgs"]):
+                return make_response({"message":"Name and commodity weight required"},400)
+            # validate recipients data
+            if not all(attr in recipient_data for attr in ["full_name","phone_number"]):
+                return make_response({"message":"Recipient name and phone number are required"},400)
+            phone_number=recipient_data.get("phone_number")
+            if not str(phone_number).isdigit() or len(str(phone_number))!=9:
+                return make_response({"message":"Invalid phone number format"},400)
+            #  creating a commodity based on the users request
+            new_commodity = Commodity(
+                name = commodity_data.get("name"),
+                weight_kgs = commodity_data["weight_kgs"],
+                length_cm = commodity_data.get("length_cm",0),
+                width_cm = commodity_data.get("width_cm",0),
+                height_cm = commodity_data.get("height_cm",0)
+            )
+            #  adding and commiting the new_commodity to the database 
+            db.session.add(new_commodity)
+            db.session.flush()
+
+            # Upload images related to the newly added commodity if the images exist
+            image_urls = []  # List to store Cloudinary image URLs
+            if images and len(images)> 0:
+                # Upload each image to Cloudinary and store the URLs
+                for file in images:
+                    if file.filename!="" and file.filename in ["jpg","png","jpeg"]:
+                        result = cloudinary.uploader.upload(file)
+                        image_urls.append(result.get("url"))
+                # Create and associate commodity images with the newly created commodity
+                for url in image_urls:
+                    new_commodity_image = Commodity_Image(
+                        image_url=url,
+                        commodity_id=new_commodity.id,
+                    )
+                    db.session.add(new_commodity_image)
+                db.session.flush()
+
+            # create a recipient to whom the order will be delivered
+            new_recipient = Recipient(
+                full_name = recipient_data["full_name"],
+                phone_number = recipient_data["phone_number"]
+                # email = recipient_data["email"]
+            )
+            db.session.add(new_recipient)
+            db.session.flush()
+
+            # getting the admin_data based on the admin who is logged in
+            admin_data = Admin.query.filter_by(id = get_jwt_identity()).first()
+           
+            # creating a new order
+            new_order = Order(
+                status=Order_Status_Enum("Pending_dispatch").value,
+                commodity_id = new_commodity.id,
+                merchant_id = admin_data.id,
+                recipient_id = new_recipient.id,
+                created_at=datetime.now(),
+                address_id=admin_data.address_id
+            )
+            # adding and commiting the new_recepient to the database
+            db.session.add(new_order)
+            db.session.commit()
+
+            # Return the response with status 201 (Created)
+            return make_response(new_order.to_dict(), 201)
+
+        except DatabaseError as e:
+            print(e)
+            # creating and returning a database error message
+            db.session.rollback()
+            error_message = f"Database error : {str(e)}"
+            return make_response({"message":error_message},500)
+        except Exception as e:
+            print(e)
+            # creating and returning an unexpected error message 
+            db.session.rollback()
+            error_message = f"An unexpected error occured: {str(e)}"
+            return make_response({"message":error_message},500)
+
+api.add_resource(Order_List,"/order-list", endpoint="order-list")
+
 
 api.add_resource(AdminResource, "/", endpoint="admins")
 api.add_resource(AdminDetailResource, "/<string:admin_id>", endpoint="admin_detail")
