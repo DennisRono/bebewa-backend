@@ -13,12 +13,14 @@ from orders.order import order_bp
 from reviews.review import review_bp
 from merchants.commodity import commodity_bp
 from flask_jwt_extended import JWTManager
-
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 CORS(app)
 JWTManager(app=app)
 app.config.from_object(Config)
+socketio=SocketIO(app=app,cors_allowed_origins="*")
+
 
 
 app.register_blueprint(auth)
@@ -53,4 +55,4 @@ api.add_resource(Wake, "/wake", endpoint="wake")
 # print(Driver_status_enum("Active").value)
 
 if __name__ == "__main__":
-    app.run(port=5555, debug=True)
+    socketio.run(port=5555, debug=True)

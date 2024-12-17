@@ -323,7 +323,6 @@ class Order(db.Model, SerializerMixin):
     commodity_id = db.Column(db.String, db.ForeignKey("commodities.id"))
     dispatch_time = db.Column(db.DateTime)
     arrival_time = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, nullable=False)
     price = db.Column(db.Integer, nullable=False, default=0)
     merchant_id = db.Column(db.String, db.ForeignKey("merchants.id"))
     address_id = db.Column(db.String, db.ForeignKey("addresses.id"), nullable=False)
