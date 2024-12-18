@@ -98,15 +98,26 @@ class Orders(Resource):
                     db.session.add(new_commodity_image)
                 db.session.flush()
 
-            # create a recipient to whom the order will be delivered
-            new_recipient = Recipient(
-                full_name = recipient_data["full_name"],
-                phone_number = recipient_data["phone_number"]
-                # email = recipient_data["email"]
-            )
-            db.session.add(new_recipient)
-            db.session.flush()
+            # create a recipient to whom the order will be delivered if the recipients phone number does not exist in the database
+            is_recipient=Recipient.query.filter_by(phone_number=phone_number).first()
+            if not is_recipient:
+                is_recipient = Recipient(
+                    full_name = recipient_data["full_name"],
+                    phone_number = recipient_data["phone_number"]
+                    # email = recipient_data["email"]
+                )
+                db.session.add(is_recipient)
+                db.session.flush()
 
+            #add an address for the recipient
+            from models import Address
+            new_address=Address(
+                county=recipient_data.get("county"),
+                town=recipient_data.get("town"),
+                street=recipient_data.get("street")
+            )
+            db.session.add(new_address)
+            db.session.flush()
             # getting the merchant data based on the merchant who is logged in
             merchant_data = Merchant.query.filter_by(id = get_jwt_identity()).first()
            
@@ -115,9 +126,9 @@ class Orders(Resource):
                 status=Order_Status_Enum("Pending_dispatch").value,
                 commodity_id = new_commodity.id,
                 merchant_id = merchant_data.id,
-                recipient_id = new_recipient.id,
+                recipient_id = is_recipient.id,
                 created_at=datetime.now(),
-                address_id=merchant_data.address_id
+                address_id=new_address.id
             )
             # adding and commiting the new_recepient to the database
             db.session.add(new_order)

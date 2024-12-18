@@ -3,7 +3,7 @@ from flask_restful import Api, Resource
 from flask_jwt_extended import jwt_required,get_jwt_identity,create_access_token,create_refresh_token
 from werkzeug.security import check_password_hash,generate_password_hash
 from models import Driver, Merchant,Admin,db
-from websockets_files.socketio_test import connected_users
+from websockets_files.socketio_sample import connected_users
 
 auth = Blueprint("auth", __name__, url_prefix="/auth")
 api = Api(auth)
@@ -58,6 +58,7 @@ class Driver_Login(Resource):
             return make_response({
                 "access_token":create_access_token(identity=driver.id),
                 "refresh_token":create_refresh_token(identity=driver.id),
+                "user":driver.to_dict()
             },201)
         except Exception as e:
             print(e)
@@ -85,6 +86,7 @@ class Merchant_Login(Resource):
             return make_response({
                 "access_token":create_access_token(identity=merchant.id),
                 "refresh_token":create_refresh_token(identity=merchant.id),
+                "user":merchant.to_dict()
             },201)
         except Exception as e:
             return make_response({"message":"Internal server error"},500)
@@ -107,6 +109,7 @@ class Admin_Login(Resource):
             return make_response({
                 "access_token":create_access_token(identity=admin.id),
                 "refresh_token":create_refresh_token(identity=admin.id),
+                "user":admin.to_dict()
             },201)
         except Exception as e:
             print(e)

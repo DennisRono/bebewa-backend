@@ -6,6 +6,7 @@ import uuid
 from werkzeug.security import generate_password_hash
 import re
 from werkzeug.exceptions import BadRequest
+from flask_jwt_extended import jwt_required
 
 admin_bp = Blueprint("admin", __name__)
 api = Api(admin_bp)
@@ -250,6 +251,7 @@ class DriverResource(Resource):
 
 
 class MerchantResource(Resource):
+    # @jwt_required()
     def get(self):
         try:
             merchants = Merchant.query.filter_by(mark_deleted=False).all()
@@ -257,6 +259,7 @@ class MerchantResource(Resource):
         except Exception as e:
             return make_response({"message": str(e)}, 500)
 
+    # @jwt_required()
     def post(self):
         args = request.get_json()
         name = args.get("name")
