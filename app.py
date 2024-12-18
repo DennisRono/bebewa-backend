@@ -13,13 +13,22 @@ from orders.order import order_bp
 from reviews.review import review_bp
 from merchants.commodity import commodity_bp
 from flask_jwt_extended import JWTManager
+import cloudinary
 
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
 CORS(app)
 JWTManager(app=app)
 app.config.from_object(Config)
+socketio=SocketIO(app=app,cors_allowed_origins="*")
 
+
+cloudinary.config(
+    cloud_name=Config.cloudinary_cloud_name,
+    api_key=Config.cloudinary_api_key,
+    api_secret=Config.cloudinary_api_secret
+)
 
 app.register_blueprint(auth)
 app.register_blueprint(admin_bp, url_prefix="/admin")
@@ -53,4 +62,4 @@ api.add_resource(Wake, "/wake", endpoint="wake")
 # print(Driver_status_enum("Active").value)
 
 if __name__ == "__main__":
-    app.run(port=5555, debug=True)
+    socketio.run(port=5555, debug=True)

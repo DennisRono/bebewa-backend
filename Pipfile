@@ -15,6 +15,8 @@ flask-migrate = "*"
 faker = "*"
 flask-jwt-extended = "*"
 cloudinary = "*"
+flask-socketio = "*"
+requests = "*"
 
 [dev-packages]
 
