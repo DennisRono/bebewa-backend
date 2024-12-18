@@ -5,6 +5,7 @@ from administration.drivers.driver import DriverResource
 from administration.makes.make import MakeResource
 from administration.merchants.merchant import MerchantResource
 from administration.models.model import MakeAndModel, ModelResource
+from administration.orders.orders import AdminOrderById, Order_List
 from administration.vehicles.vehicle import VehicleResource
 from models import db, Admin, Admin_status_enum
 import uuid
@@ -138,3 +139,5 @@ api.add_resource(MakeResource, "/make/<string:make_id>", endpoint="make_detail")
 api.add_resource(VehicleResource, "/vehicle", endpoint="vehicle")
 api.add_resource(VehicleResource, "/vehicle/<string:vehicle_id>", endpoint="vehicle_detail")
 api.add_resource(MakeAndModel, "/make-and-model", endpoint="make_and_model")
+api.add_resource(Order_List,"/order-list", endpoint="order-list")
+api.add_resource(AdminOrderById,'/admin-order/<string:id>', endpoint ="/admin-order/<string:id>")
